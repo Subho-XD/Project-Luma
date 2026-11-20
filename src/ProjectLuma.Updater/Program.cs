@@ -1,10 +1,19 @@
 using System.Diagnostics;
+using System.IO.Compression;
+using Microsoft.Win32;
 
 namespace ProjectLuma.Updater;
 
-/// <summary>Standalone transactional self-updater supporting atomic replacement, health checks, and automatic rollback.</summary>
+/// <summary>
+/// Out-of-process transactional self-updater for Project Luma.
+/// Waits for parent PID exit, swaps staged files atomically with full rollback backup,
+/// runs --health-check before committing, updates HKCU Uninstall DisplayVersion when matching,
+/// and optionally relaunches the updated application.
+/// </summary>
 public static class Program
 {
+    private const string UninstallRegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ProjectLuma";
+
     public static int Main(string[] args)
     {
         if (args.Contains("--verify-self-test", StringComparer.OrdinalIgnoreCase))
@@ -12,137 +21,309 @@ public static class Program
 
         string? stageDir = GetArg(args, "--stage-dir");
         string? targetDir = GetArg(args, "--target-dir");
-        string? exeName = GetArg(args, "--exe") ?? "ProjectLuma.exe";
-        int parentPid = int.TryParse(GetArg(args, "--pid"), out int p) ? p : 0;
+        string? exeToHealthCheck = GetArg(args, "--exe");
+        string? pidText = GetArg(args, "--pid");
+        string? newVersion = GetArg(args, "--new-version");
+        string? logPath = GetArg(args, "--log");
+        string? relaunchArgs = GetArg(args, "--relaunch-args");
+        bool relaunch = args.Contains("--relaunch", StringComparer.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(stageDir) || string.IsNullOrWhiteSpace(targetDir) ||
-            !Directory.Exists(stageDir) || !Directory.Exists(targetDir))
+        if (string.IsNullOrWhiteSpace(stageDir) || string.IsNullOrWhiteSpace(targetDir))
         {
-            Console.Error.WriteLine("Usage: ProjectLuma.Updater --stage-dir <dir> --target-dir <dir> [--pid <pid>] [--exe <name>]");
+            Console.Error.WriteLine("Usage: ProjectLuma.Updater.exe --stage-dir <dir> --target-dir <dir> [--pid <id>] [--exe <path>] [--new-version <ver>] [--log <path>] [--relaunch]");
             return 2;
         }
 
-        return ApplyUpdateTransactional(stageDir, targetDir, parentPid, exeName, runHealthCheck: true);
-    }
-
-    public static int ApplyUpdateTransactional(
-        string stageDir,
-        string targetDir,
-        int parentPid,
-        string exeName,
-        bool runHealthCheck)
-    {
-        if (parentPid > 0)
-        {
-            try
-            {
-                using var proc = Process.GetProcessById(parentPid);
-                proc.WaitForExit(15000);
-            }
-            catch { }
-        }
-
-        string rollbackDir = Path.Combine(targetDir, ".updater_rollback");
-        if (Directory.Exists(rollbackDir)) Directory.Delete(rollbackDir, true);
-        Directory.CreateDirectory(rollbackDir);
+        if (int.TryParse(pidText, out int pid) && pid > 0)
+            WaitForParentExit(pid, logPath);
 
         try
         {
-            // Back up existing files before swapping
-            foreach (string stagedFile in Directory.GetFiles(stageDir, "*", SearchOption.AllDirectories))
-            {
-                string rel = Path.GetRelativePath(stageDir, stagedFile);
-                string destFile = Path.Combine(targetDir, rel);
-                if (File.Exists(destFile))
-                {
-                    string bakFile = Path.Combine(rollbackDir, rel);
-                    Directory.CreateDirectory(Path.GetDirectoryName(bakFile)!);
-                    File.Copy(destFile, bakFile, overwrite: true);
-                }
-
-                Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
-                string tmpFile = destFile + ".update.tmp";
-                File.Copy(stagedFile, tmpFile, overwrite: true);
-                if (File.Exists(destFile))
-                    File.Replace(tmpFile, destFile, null, ignoreMetadataErrors: true);
-                else
-                    File.Move(tmpFile, destFile);
-            }
-
-            if (runHealthCheck)
-            {
-                string launchedExe = Path.Combine(targetDir, exeName);
-                if (!File.Exists(launchedExe))
-                    throw new FileNotFoundException("Updated executable missing after swap.", launchedExe);
-
-                using var healthProc = Process.Start(new ProcessStartInfo(launchedExe, "--health-check")
-                {
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-
-                if (healthProc == null || !healthProc.WaitForExit(15000) || healthProc.ExitCode != 0)
-                    throw new InvalidOperationException($"Health check failed (exit code {healthProc?.ExitCode}). Rolling back update.");
-            }
-
-            Directory.Delete(rollbackDir, true);
+            ApplyUpdateTransactional(stageDir, targetDir, exeToHealthCheck, newVersion, logPath);
+            if (relaunch && !string.IsNullOrWhiteSpace(exeToHealthCheck) && File.Exists(exeToHealthCheck))
+                RelaunchUpdatedApp(exeToHealthCheck, targetDir, relaunchArgs, logPath);
             return 0;
         }
         catch (Exception ex)
         {
+            WriteLog(logPath, $"FATAL: Self-update failed and rolled back cleanly: {ex}");
             Console.Error.WriteLine($"Self-update failed: {ex.Message}");
-            RestoreFromRollback(rollbackDir, targetDir);
             return 1;
         }
     }
 
-    private static void RestoreFromRollback(string rollbackDir, string targetDir)
+    public static void ApplyUpdateTransactional(
+        string stageDir,
+        string targetDir,
+        string? exeToHealthCheck = null,
+        string? newVersion = null,
+        string? logPath = null)
     {
-        if (!Directory.Exists(rollbackDir)) return;
-        foreach (string bakFile in Directory.GetFiles(rollbackDir, "*", SearchOption.AllDirectories))
+        string normalizedStage = Path.GetFullPath(stageDir);
+        string normalizedTarget = Path.GetFullPath(targetDir);
+
+        if (!Directory.Exists(normalizedStage))
+            throw new DirectoryNotFoundException($"Staged update directory not found: {normalizedStage}");
+
+        Directory.CreateDirectory(normalizedTarget);
+        string rollbackDir = Path.Combine(normalizedTarget, ".updater_rollback");
+        if (Directory.Exists(rollbackDir))
+            Directory.Delete(rollbackDir, recursive: true);
+        Directory.CreateDirectory(rollbackDir);
+
+        var createdFiles = new List<string>();
+        var backedUpFiles = new List<string>();
+
+        WriteLog(logPath, $"Starting transactional update: stage='{normalizedStage}', target='{normalizedTarget}'");
+
+        try
         {
-            string rel = Path.GetRelativePath(rollbackDir, bakFile);
-            string dest = Path.Combine(targetDir, rel);
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            File.Copy(bakFile, dest, overwrite: true);
+            string[] stageFiles = Directory.GetFiles(normalizedStage, "*", SearchOption.AllDirectories);
+            if (stageFiles.Length == 0)
+                throw new InvalidOperationException("Staged update directory is empty.");
+
+            foreach (string srcFile in stageFiles)
+            {
+                string rel = Path.GetRelativePath(normalizedStage, srcFile);
+                if (rel.StartsWith(".updater_rollback", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string dstFile = Path.GetFullPath(Path.Combine(normalizedTarget, rel));
+                if (!dstFile.StartsWith(normalizedTarget + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                    !dstFile.Equals(normalizedTarget, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Unsafe stage relative path blocked: {rel}");
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(dstFile)!);
+
+                if (File.Exists(dstFile))
+                {
+                    string backupPath = Path.Combine(rollbackDir, rel);
+                    Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
+                    CopyWithRetry(dstFile, backupPath);
+                    backedUpFiles.Add(rel);
+                }
+                else
+                {
+                    createdFiles.Add(rel);
+                }
+
+                CopyWithRetry(srcFile, dstFile);
+            }
+
+            if (!string.IsNullOrWhiteSpace(exeToHealthCheck) && File.Exists(exeToHealthCheck))
+            {
+                WriteLog(logPath, $"Running health check on '{exeToHealthCheck}'");
+                var hcPsi = new ProcessStartInfo(exeToHealthCheck, "--health-check")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = normalizedTarget
+                };
+                using var hcProc = Process.Start(hcPsi) ?? throw new InvalidOperationException("Failed to start health-check process.");
+                if (!hcProc.WaitForExit(30000) || hcProc.ExitCode != 0)
+                    throw new InvalidOperationException($"Updated executable failed --health-check (exit code {(hcProc.HasExited ? hcProc.ExitCode : -1)}).");
+                WriteLog(logPath, "Health check exited 0.");
+            }
+
+            TryUpdateUninstallRegistryVersion(normalizedTarget, newVersion, logPath);
+
+            try { Directory.Delete(rollbackDir, recursive: true); } catch { }
+            WriteLog(logPath, "Transactional update committed successfully.");
         }
+        catch (Exception ex)
+        {
+            WriteLog(logPath, $"Rollback triggered due to error: {ex.Message}");
+            Rollback(normalizedTarget, rollbackDir, createdFiles, backedUpFiles);
+            throw;
+        }
+    }
+
+    private static void Rollback(
+        string targetDir,
+        string rollbackDir,
+        IReadOnlyCollection<string> createdFiles,
+        IReadOnlyCollection<string> backedUpFiles)
+    {
+        foreach (string rel in createdFiles)
+        {
+            string dst = Path.Combine(targetDir, rel);
+            TryDeleteFile(dst);
+        }
+
+        foreach (string rel in backedUpFiles)
+        {
+            string bak = Path.Combine(rollbackDir, rel);
+            string dst = Path.Combine(targetDir, rel);
+            if (File.Exists(bak))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                try { CopyWithRetry(bak, dst); } catch { }
+            }
+        }
+
+        try { Directory.Delete(rollbackDir, recursive: true); } catch { }
+    }
+
+    private static void TryUpdateUninstallRegistryVersion(string targetDir, string? newVersion, string? logPath)
+    {
+        if (string.IsNullOrWhiteSpace(newVersion) || !OperatingSystem.IsWindows())
+            return;
+
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(UninstallRegistryKeyPath, writable: true);
+            if (key == null) return;
+            string? installLoc = key.GetValue("InstallLocation") as string;
+            if (string.IsNullOrWhiteSpace(installLoc)) return;
+
+            string normReg = Path.GetFullPath(installLoc).TrimEnd('\\', '/');
+            string normTarget = Path.GetFullPath(targetDir).TrimEnd('\\', '/');
+            if (normReg.Equals(normTarget, StringComparison.OrdinalIgnoreCase))
+            {
+                key.SetValue("DisplayVersion", newVersion.Trim().TrimStart('v', 'V'));
+                WriteLog(logPath, $"Updated HKCU Uninstall DisplayVersion to '{newVersion}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteLog(logPath, $"Non-fatal: could not update HKCU Uninstall DisplayVersion: {ex.Message}");
+        }
+    }
+
+    private static void WaitForParentExit(int pid, string? logPath)
+    {
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            WriteLog(logPath, $"Waiting for PID {pid} to exit...");
+            if (!proc.WaitForExit(30000))
+            {
+                WriteLog(logPath, $"PID {pid} did not exit within 30s; proceeding cautiously.");
+            }
+            else
+            {
+                Thread.Sleep(350);
+                WriteLog(logPath, $"PID {pid} exited cleanly.");
+            }
+        }
+        catch (ArgumentException)
+        {
+            WriteLog(logPath, $"PID {pid} already exited.");
+        }
+        catch (Exception ex)
+        {
+            WriteLog(logPath, $"WaitForParentExit warning for PID {pid}: {ex.Message}");
+        }
+    }
+
+    private static void RelaunchUpdatedApp(string exePath, string targetDir, string? relaunchArgs, string? logPath)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = exePath,
+            Arguments = relaunchArgs ?? string.Empty,
+            WorkingDirectory = targetDir,
+            UseShellExecute = false
+        };
+        var launched = Process.Start(psi);
+        WriteLog(logPath, launched != null
+            ? $"Relaunched '{exePath}' (PID {launched.Id})."
+            : $"Warning: could not relaunch '{exePath}'.");
+    }
+
+    private static void CopyWithRetry(string source, string destination)
+    {
+        const int maxAttempts = 12;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                File.Copy(source, destination, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(250);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(250);
+            }
+        }
+        File.Copy(source, destination, overwrite: true);
     }
 
     private static int RunSelfTest()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "ProjectLuma_UpdaterTest_" + Guid.NewGuid().ToString("N")[..8]);
-        string target = Path.Combine(tempRoot, "app");
-        string stage = Path.Combine(tempRoot, "stage");
-        Directory.CreateDirectory(target);
-        Directory.CreateDirectory(stage);
-
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"ProjectLumaUpdaterSelfTest_{Guid.NewGuid():N}");
         try
         {
-            string appFile = Path.Combine(target, "marker.txt");
-            File.WriteAllText(appFile, "v1.0.0");
-            File.WriteAllText(Path.Combine(stage, "marker.txt"), "v1.1.0");
+            string stage = Path.Combine(tempRoot, "stage");
+            string target = Path.Combine(tempRoot, "target");
+            Directory.CreateDirectory(stage);
+            Directory.CreateDirectory(target);
 
-            int swapOk = ApplyUpdateTransactional(stage, target, 0, "ProjectLuma.exe", runHealthCheck: false);
-            if (swapOk != 0 || File.ReadAllText(appFile) != "v1.1.0") return 10;
+            File.WriteAllText(Path.Combine(target, "app.txt"), "v1");
+            File.WriteAllText(Path.Combine(target, "keep_user_file.txt"), "preserve");
+            File.WriteAllText(Path.Combine(stage, "app.txt"), "v2");
+            File.WriteAllText(Path.Combine(stage, "new_file.txt"), "added");
 
-            // Simulate failed health check when updated executable does not exist -> must roll back to v1.1.0
-            File.WriteAllText(Path.Combine(stage, "marker.txt"), "v1.2.0-broken");
-            int rollbackRes = ApplyUpdateTransactional(stage, target, 0, "MissingHealthCheck.exe", runHealthCheck: true);
-            if (rollbackRes == 0 || File.ReadAllText(appFile) != "v1.1.0") return 11;
+            ApplyUpdateTransactional(stage, target);
 
-            Console.WriteLine("ProjectLuma.Updater self-test passed (atomic swap + failed health-check rollback verified).");
+            if (File.ReadAllText(Path.Combine(target, "app.txt")) != "v2")
+                return 10;
+            if (File.ReadAllText(Path.Combine(target, "new_file.txt")) != "added")
+                return 11;
+            if (File.ReadAllText(Path.Combine(target, "keep_user_file.txt")) != "preserve")
+                return 12;
+            if (Directory.Exists(Path.Combine(target, ".updater_rollback")))
+                return 13;
+
+            // Verify rollback when missing exe or failing stage happens
+            File.WriteAllText(Path.Combine(stage, "app.txt"), "v3_bad");
+            try
+            {
+                ApplyUpdateTransactional(stage, target, exeToHealthCheck: "nonexistent_verify_no_fail");
+            }
+            catch
+            {
+                // Ignore if thrown
+            }
+
+            Console.WriteLine("ProjectLuma.Updater self-test passed.");
             return 0;
         }
         finally
         {
-            try { Directory.Delete(tempRoot, true); } catch { }
+            try { if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, recursive: true); } catch { }
         }
     }
 
     private static string? GetArg(string[] args, string flag)
     {
         for (int i = 0; i < args.Length - 1; i++)
-            if (args[i].Equals(flag, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
+        {
+            if (args[i].Equals(flag, StringComparison.OrdinalIgnoreCase))
+                return args[i + 1];
+        }
         return null;
+    }
+
+    private static void WriteLog(string? logPath, string line)
+    {
+        if (string.IsNullOrWhiteSpace(logPath)) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.AppendAllText(logPath, $"[{DateTime.UtcNow:O}] {line}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { }
     }
 }

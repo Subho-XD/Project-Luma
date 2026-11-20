@@ -43,6 +43,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _setupCts;
     private CancellationTokenSource? _neuralScanCts;
     private CancellationTokenSource? _toastCts;
+    private CancellationTokenSource? _appUpdateCts;
     private FileSystemWatcher? _downloadsWatcher;
     private CancellationTokenSource? _downloadsDebounceCts;
     private readonly SemaphoreSlim _profileSaveLock = new(1, 1);
@@ -343,6 +344,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CancelUpdateItemCommand = new RelayCommand<UpdateCheckItem?>(u =>
         {
             if (u == null) return;
+            if (u.Kind.Equals("Application", StringComparison.OrdinalIgnoreCase) ||
+                u.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase))
+            {
+                _appUpdateCts?.Cancel();
+                return;
+            }
             ComponentItems.FirstOrDefault(c => c.Id.Equals(u.ComponentId, StringComparison.OrdinalIgnoreCase))?.CancelOperation();
         });
         ToggleComponentDetailsCommand = new RelayCommand<BackendComponentItem?>(b =>
@@ -583,6 +590,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string NeuralCandidateScanSummary { get => _neuralCandidateScanSummary; set => SetProperty(ref _neuralCandidateScanSummary, value); }
 
     public event Action? TrayPreferenceSyncRequested;
+    public event Action? ApplicationUpdateRestartRequested;
 
     public bool IsOnboardingVisible { get => _isOnboardingVisible; set => SetProperty(ref _isOnboardingVisible, value); }
     public int OnboardingStepIndex
@@ -1845,9 +1853,47 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private async Task ApplyUpdateItemAsync(UpdateCheckItem? item)
     {
-        if (item == null || item.IsBusy || item.Kind != "Backend" || !item.ShowActionButton) return;
+        if (item == null || item.IsBusy || !item.ShowActionButton) return;
         try
         {
+            if (item.Kind.Equals("Application", StringComparison.OrdinalIgnoreCase) ||
+                item.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase))
+            {
+                if (item.ActionLabel.Equals("Retry Check", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _updateCoordinator.CheckNowAsync();
+                    return;
+                }
+
+                _appUpdateCts?.Cancel();
+                _appUpdateCts?.Dispose();
+                _appUpdateCts = new CancellationTokenSource();
+
+                ShowToast($"Downloading Project Luma v{item.AvailableVersion}...");
+                var stage = await _updateCoordinator.DownloadAndStageAppUpdateAsync(item, _appUpdateCts.Token);
+                if (!stage.Succeeded)
+                {
+                    if (_appUpdateCts.IsCancellationRequested)
+                        ShowToast("Application update canceled.");
+                    else
+                        ActionAlertMessage = string.IsNullOrWhiteSpace(stage.ErrorMessage) ? "Application update failed." : stage.ErrorMessage;
+                    return;
+                }
+
+                bool launched = _updateCoordinator.LaunchSelfUpdater(stage);
+                if (!launched)
+                {
+                    ActionAlertMessage = "Update verified and staged, but ProjectLuma.Updater.exe could not be launched.";
+                    return;
+                }
+
+                ShowToast($"Restarting to complete upgrade to v{stage.TargetVersion}...");
+                await Task.Delay(250);
+                ApplicationUpdateRestartRequested?.Invoke();
+                return;
+            }
+
+            if (item.Kind != "Backend") return;
             var componentItem = ComponentItems.FirstOrDefault(c => c.Id.Equals(item.ComponentId, StringComparison.OrdinalIgnoreCase));
 
             if (item.ActionLabel.Equals("Verify", StringComparison.OrdinalIgnoreCase))

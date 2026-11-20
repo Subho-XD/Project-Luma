@@ -24,7 +24,7 @@ public sealed class ArtworkDiscoveryService : IArtworkDiscoveryService
     {
         _logger = logger;
         _http = httpClient ?? CreateHttpClient();
-        string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma");
+        string appData = LumaPaths.AppDataDirectory;
         CacheDirectory = string.IsNullOrWhiteSpace(cacheDirectory)
             ? Path.Combine(appData, "artwork_cache")
             : cacheDirectory;

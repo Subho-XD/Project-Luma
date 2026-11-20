@@ -13,7 +13,7 @@
                     <TextBlock Text="Keep Project Luma and authorized enhancement components verified and up to date."
                                FontFamily="{StaticResource FontUi}" FontSize="13.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
                 </StackPanel>
-                <Button Grid.Column="1" Content="Check for Updates" Style="{StaticResource LumaPrimaryButtonStyle}" Command="{Binding CheckUpdatesNowCommand}" VerticalAlignment="Center" />
+                <Button Grid.Column="1" AutomationProperties.AutomationId="DownloadsCheckUpdatesBtn" Content="Check for Updates" Style="{StaticResource LumaPrimaryButtonStyle}" Command="{Binding CheckUpdatesNowCommand}" VerticalAlignment="Center" />
             </Grid>
 
             <!-- Summary Bar -->
@@ -21,11 +21,11 @@
                 <UniformGrid Columns="3">
                     <StackPanel Margin="0,0,16,0">
                         <TextBlock Text="Application version" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
-                        <TextBlock Text="{Binding Settings.AppVersion, StringFormat=v{0}}" FontFamily="{StaticResource FontMono}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0" />
+                        <TextBlock AutomationProperties.AutomationId="DownloadsAppVersionText" Text="{Binding Settings.AppVersion, StringFormat=v{0}}" FontFamily="{StaticResource FontMono}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0" />
                     </StackPanel>
                     <StackPanel Margin="0,0,16,0">
                         <TextBlock Text="Sync status" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
-                        <TextBlock Text="{Binding UpdateStatus.CurrentPhase}" FontFamily="{StaticResource FontUi}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AccentOpticalBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock AutomationProperties.AutomationId="DownloadsSyncStatusText" Text="{Binding UpdateStatus.CurrentPhase}" FontFamily="{StaticResource FontUi}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AccentOpticalBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="Last checked" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
@@ -53,7 +53,7 @@
                                                 <TextBlock Text="{Binding StateBadgeText}" FontFamily="{StaticResource FontUi}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                                             </Border>
                                         </WrapPanel>
-                                        <TextBlock Text="{Binding Status}" FontFamily="{StaticResource FontUi}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock AutomationProperties.AutomationId="{Binding ComponentId, StringFormat=UpdateStatus_{0}}" Text="{Binding Status}" FontFamily="{StaticResource FontUi}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                         <TextBlock Text="{Binding ReasonText}" Visibility="{Binding ReasonText, Converter={StaticResource BoolToVisibilityConverter}}"
                                                    FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
                                         <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
@@ -63,10 +63,10 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Content="Cancel" Style="{StaticResource LumaDangerButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
+                                        <Button AutomationProperties.AutomationId="{Binding ComponentId, StringFormat=UpdateCancel_{0}}" Content="Cancel" Style="{StaticResource LumaDangerButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
                                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 Command="{Binding DataContext.CancelUpdateItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                        <Button Content="{Binding ActionLabel}" Style="{StaticResource LumaPrimaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="16,0"
+                                        <Button AutomationProperties.AutomationId="{Binding ComponentId, StringFormat=UpdateAction_{0}}" Content="{Binding ActionLabel}" Style="{StaticResource LumaPrimaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="16,0"
                                                 Visibility="{Binding ShowActionButton, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                                                 Command="{Binding DataContext.ApplyUpdateItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />

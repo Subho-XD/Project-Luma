@@ -132,6 +132,10 @@ public sealed class UpdateCheckItem : INotifyPropertyChanged
     public double DownloadProgress { get => _downloadProgress; set => SetField(ref _downloadProgress, value); }
     public string DownloadSpeedText { get => _downloadSpeedText; set => SetField(ref _downloadSpeedText, value); }
     public string DownloadedSizeText { get => _downloadedSizeText; set => SetField(ref _downloadedSizeText, value); }
+    public string DownloadUrl { get; set; } = string.Empty;
+    public string ExpectedSha256 { get; set; } = string.Empty;
+    public string AssetName { get; set; } = string.Empty;
+    public string ReleasePageUrl { get; set; } = string.Empty;
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
@@ -153,4 +157,39 @@ public sealed class LogEntryRecord
     public string Category { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string? Details { get; set; }
+}
+
+/// <summary>Centralizes Project Luma app-data directory resolution with test/sandbox override support.</summary>
+public static class LumaPaths
+{
+    public const string AppDataOverrideEnvVar = "PROJECT_LUMA_APPDATA";
+
+    public static string AppDataDirectory
+    {
+        get
+        {
+            string? overridePath = Environment.GetEnvironmentVariable(AppDataOverrideEnvVar);
+            if (!string.IsNullOrWhiteSpace(overridePath))
+                return Path.GetFullPath(overridePath.Trim());
+
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ProjectLuma");
+        }
+    }
+
+    public static string GetSubdirectory(string name) => Path.Combine(AppDataDirectory, name);
+}
+
+/// <summary>Result produced after downloading, verifying, and staging an application self-update.</summary>
+public sealed class AppSelfUpdateStageResult
+{
+    public bool Succeeded { get; set; }
+    public string TargetVersion { get; set; } = string.Empty;
+    public string StageDirectory { get; set; } = string.Empty;
+    public string TargetInstallDirectory { get; set; } = string.Empty;
+    public string AppExecutablePath { get; set; } = string.Empty;
+    public string UpdaterExecutablePath { get; set; } = string.Empty;
+    public string Sha256 { get; set; } = string.Empty;
+    public string ErrorMessage { get; set; } = string.Empty;
 }

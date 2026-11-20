@@ -19,7 +19,7 @@
 
 ## 2. Baseline Verification & Toolchain Discovery
 
-- **Toolchain:** System PATH `dotnet` resolves only to `.NET 9.0.18` runtimes without SDKs. `.NET 10 SDK (10.0.404)` is installed at `C:\Users\ghoru\.dotnet\dotnet.exe` and builds/tests the entire 12-project solution cleanly.
+- **Toolchain:** System PATH `dotnet` resolves only to `.NET 9.0.18` runtimes without SDKs. `.NET 10 SDK (10.0.404)` is installed at `%USERPROFILE%\.dotnet\dotnet.exe` and builds/tests the entire 12-project solution cleanly.
 - **Automated Test Baseline:** Executed `& "$env:USERPROFILE\.dotnet\dotnet.exe" test ProjectLuma.sln -c Release`:
   - **Result:** `30 / 30` passed (`0` failed, `0` skipped, duration `7s`).
   - Covers GPU detection, capability matrix, VDF/PE discovery, game installer `.luma_backup`, GitHub package streaming + cancellation + UI STA automation, Downloads watcher, UpdateCoordinator actions, and InstallerEngine unit tests.
@@ -80,4 +80,4 @@ Launching `release\v3.1.0\ProjectLuma-Setup-x64.exe` interactively without CLI s
    - Live RX 6600 (`gfx1032`) HIP probe: `C:\Windows\System32\amdhip64_6.dll` (`10.0.3652.0`) loaded and initialized cleanly (`hipRuntimeGetVersion rc=0 ver=60450101`, `hipGetDeviceCount rc=0 count=1`). `amdhip64_7.dll` (HIP 7.2) is NOT installed, and AMD official HIP SDK 7.2 Windows requirements exclude `gfx1032`.
    - `CapabilityEngine.cs` still contains stale `"v0.8.0"` comments/strings, lacks the 8-state `NeuralRenderingActivationState` model (`Available`, `DependencyMissing`, `RuntimeMissing`, `ReadyToConfigure`, `InstallationInProgress`, `Active`, `RuntimeFailed`, `Unsupported`), and disables the AI Visuals toggle in `GameDetailsView` without inline explanation.
 5. **OptiScaler Live Check (2026-11-20):** Latest stable release is **`v0.9.5`** (`Optiscaler_0.9.5-final.20261116.7z`, `70,418,897` bytes) with GitHub API digest `sha256:77e3ed76bed04e1fb32bacb5a72799ff172f3da22ed5231c0cf3e84fe6761662`.
-6. **Branding & Fonts:** `assets/branding/project-luma-icon.{png,svg}` are identical to `C:\Users\ghoru\Downloads\Luma_Icon.{png,svg}`. `GoogleSans.ttf` + `SpaceMono-*.ttf` with SIL OFL-1.1 notices are bundled cleanly; zero `Space Grotesk` references exist in `src/`.
+6. **Branding & Fonts:** `assets/branding/project-luma-icon.{png,svg}` are identical to `%USERPROFILE%\Downloads\Luma_Icon.{png,svg}`. `GoogleSans.ttf` + `SpaceMono-*.ttf` with SIL OFL-1.1 notices are bundled cleanly; zero `Space Grotesk` references exist in `src/`.

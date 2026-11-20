@@ -22,7 +22,7 @@ public sealed class LumaLogger : ILumaLogger, IDisposable
     public LumaLogger(string? logDirectory = null)
     {
         LogDirectory = string.IsNullOrWhiteSpace(logDirectory)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma", "logs")
+            ? LumaPaths.GetSubdirectory("logs")
             : logDirectory;
         Directory.CreateDirectory(LogDirectory);
     }

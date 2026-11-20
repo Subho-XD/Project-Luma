@@ -13,6 +13,7 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
     private readonly IBackendOrchestrator _orchestrator;
     private readonly IGameInstaller _installer;
     private readonly ILumaLogger _logger;
+    private readonly string? _defaultDownloadsDirectory;
 
     public IntelligentComponentResolver(
         IPackageManager packageManager,
@@ -20,7 +21,8 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         ICompatibilityRepository repo,
         IBackendOrchestrator orchestrator,
         IGameInstaller installer,
-        ILumaLogger logger)
+        ILumaLogger logger,
+        string? defaultDownloadsDirectory = null)
     {
         _packageManager = packageManager;
         _dllVault = dllVault;
@@ -28,6 +30,7 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         _orchestrator = orchestrator;
         _installer = installer;
         _logger = logger;
+        _defaultDownloadsDirectory = defaultDownloadsDirectory;
     }
 
     public async Task<ComponentResolutionPlan> AnalyzeRequirementsAsync(
@@ -412,9 +415,11 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
     {
         int discoveredCount = 0;
 
-        string resolvedDownloads = string.IsNullOrWhiteSpace(downloadsDirectory)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
-            : downloadsDirectory;
+        string resolvedDownloads = !string.IsNullOrWhiteSpace(downloadsDirectory)
+            ? downloadsDirectory
+            : (!string.IsNullOrWhiteSpace(_defaultDownloadsDirectory)
+                ? _defaultDownloadsDirectory
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
 
         var scanRoots = new List<string>();
         if (additionalGameDirs != null)

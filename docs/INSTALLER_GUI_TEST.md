@@ -9,9 +9,9 @@
 
 1. **Window Launch:** `Project Luma Setup — v3.3.0` rendered and accepted automation focus immediately (`0` crash/hang).
 2. **Stage 1 -> Stage 2 (`SetupNextBtn`):** Navigated cleanly to `System Check` showing RX 6600 (`gfx1032`) compatibility items.
-3. **Stage 2 -> Stage 3 (`SetupNextBtn`):** Navigated cleanly to `Install Destination`; set `SetupInstallDirBox` text to `C:\Users\ghoru\AppData\Local\Temp\ProjectLumaGuiTest_v330`.
+3. **Stage 2 -> Stage 3 (`SetupNextBtn`):** Navigated cleanly to `Install Destination`; set `SetupInstallDirBox` text to `%TEMP%\ProjectLumaGuiTest_v330`.
 4. **Embedded Payload Extraction & Install:** Clicked `SetupNextBtn` (`Install Now`); observed completion banner:
-   `Project Luma v3.3.0 installed to C:\Users\ghoru\AppData\Local\Temp\ProjectLumaGuiTest_v330`
+   `Project Luma v3.3.0 installed to %TEMP%\ProjectLumaGuiTest_v330`
 5. **Completion & Exit:** Unchecked `SetupLaunchAfterFinishCheck` and clicked `Finish` (`SetupNextBtn`); process exited with code `0`.
 6. **Binary & Runtime Verification:**
    - `FileVersionInfo.GetVersionInfo("ProjectLuma.exe").FileVersion` = `3.3.0.0`

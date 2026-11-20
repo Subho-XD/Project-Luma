@@ -37,7 +37,7 @@ public sealed class TransactionalGameInstaller : IGameInstaller
         _peAnalyzer = peAnalyzer;
         _logger = logger;
         _centralBackupMirrorDir = string.IsNullOrWhiteSpace(centralBackupMirrorDir)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma", "backups")
+            ? LumaPaths.GetSubdirectory("backups")
             : centralBackupMirrorDir;
         Directory.CreateDirectory(_centralBackupMirrorDir);
     }

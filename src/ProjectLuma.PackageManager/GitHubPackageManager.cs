@@ -59,7 +59,7 @@ public sealed class GitHubPackageManager : IPackageManager
         _logger = logger;
         _http = httpClient ?? CreateSafeHttpClient();
         StagingRootDirectory = string.IsNullOrWhiteSpace(stagingRootDirectory)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma", "backends")
+            ? LumaPaths.GetSubdirectory("backends")
             : stagingRootDirectory;
         Directory.CreateDirectory(StagingRootDirectory);
         _manifestSeedPath = ResolveManifestPath(manifestSeedPath);

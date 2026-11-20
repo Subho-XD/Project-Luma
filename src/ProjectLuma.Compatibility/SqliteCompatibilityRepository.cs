@@ -31,7 +31,7 @@ public sealed class SqliteCompatibilityRepository : ICompatibilityRepository
     public SqliteCompatibilityRepository(ILumaLogger logger, string? databasePath = null, string? seedJsonPath = null)
     {
         _logger = logger;
-        string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma");
+        string appData = LumaPaths.AppDataDirectory;
         Directory.CreateDirectory(appData);
         _dbPath = string.IsNullOrWhiteSpace(databasePath) ? Path.Combine(appData, "luma.db") : databasePath;
         Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
@@ -388,10 +388,7 @@ public sealed class SqliteCompatibilityRepository : ICompatibilityRepository
         model.AppVersion = "3.3.0";
         if (string.IsNullOrWhiteSpace(model.BackupRootPath))
         {
-            model.BackupRootPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ProjectLuma",
-                "backups");
+            model.BackupRootPath = LumaPaths.GetSubdirectory("backups");
         }
         if (model.UpdateCheckIntervalHours <= 0) model.UpdateCheckIntervalHours = 6;
         if (model.BackupRetentionCount <= 0) model.BackupRetentionCount = 5;

@@ -51,7 +51,7 @@ public sealed class UserDllVault : IUserDllVault
         _logger = logger;
         _versionOverride = versionOverride;
         VaultDirectory = string.IsNullOrWhiteSpace(vaultDirectory)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProjectLuma", "UserComponents")
+            ? LumaPaths.GetSubdirectory("UserComponents")
             : vaultDirectory;
         Directory.CreateDirectory(VaultDirectory);
         Directory.CreateDirectory(NeuralRenderingVaultDirectory);
@@ -100,8 +100,8 @@ public sealed class UserDllVault : IUserDllVault
             {
                 // Check legacy folder or versioned folder fallback without touching non-existent files
                 string legacy = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "ProjectLuma", "user_dlls", Path.GetFileName(rec.FileName));
+                    LumaPaths.GetSubdirectory("user_dlls"),
+                    Path.GetFileName(rec.FileName));
                 if (File.Exists(legacy))
                     rec.StoredPath = legacy;
             }
@@ -544,8 +544,8 @@ public sealed class UserDllVault : IUserDllVault
         }
 
         string legacyTarget = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ProjectLuma", "user_dlls", safeName);
+            LumaPaths.GetSubdirectory("user_dlls"),
+            safeName);
         if (File.Exists(legacyTarget))
         {
             try { File.Delete(legacyTarget); } catch { }

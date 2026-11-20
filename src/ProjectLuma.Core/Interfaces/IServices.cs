@@ -160,6 +160,8 @@ public interface IUpdateCoordinator
     Task CheckNowAsync(CancellationToken ct = default);
     Task ApplyBackendUpdateAsync(string backendId, CancellationToken ct = default);
     Task UpdateEligibleGamesForBackendAsync(string backendId, CancellationToken ct = default);
+    Task<AppSelfUpdateStageResult> DownloadAndStageAppUpdateAsync(UpdateCheckItem item, CancellationToken ct = default);
+    bool LaunchSelfUpdater(AppSelfUpdateStageResult stageResult);
 }
 
 public interface IArtworkDiscoveryService

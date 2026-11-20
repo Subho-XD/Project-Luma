@@ -86,19 +86,19 @@
 
                 <!-- 5 Primary Navigation Items (Home, My Games, Enhancement Library, Downloads, Settings) -->
                 <StackPanel DockPanel.Dock="Top">
-                    <RadioButton Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconHome}" Content="Home"
+                    <RadioButton AutomationProperties.AutomationId="NavHomeBtn" Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconHome}" Content="Home"
                                  IsChecked="{Binding IsHomeActive, Mode=OneWay}"
                                  Command="{Binding NavigateCommand}" CommandParameter="Home" />
-                    <RadioButton Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconLibrary}" Content="My Games"
+                    <RadioButton AutomationProperties.AutomationId="NavMyGamesBtn" Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconLibrary}" Content="My Games"
                                  IsChecked="{Binding IsMyGamesActive, Mode=OneWay}"
                                  Command="{Binding NavigateCommand}" CommandParameter="MyGames" />
-                    <RadioButton Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconEnhancement}" Content="Enhancement Library"
+                    <RadioButton AutomationProperties.AutomationId="NavEnhancementLibraryBtn" Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconEnhancement}" Content="Enhancement Library"
                                  IsChecked="{Binding IsEnhancementLibraryActive, Mode=OneWay}"
                                  Command="{Binding NavigateCommand}" CommandParameter="EnhancementLibrary" />
-                    <RadioButton Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconUpdates}" Content="Downloads"
+                    <RadioButton AutomationProperties.AutomationId="NavDownloadsBtn" Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconUpdates}" Content="Downloads"
                                  IsChecked="{Binding IsDownloadsActive, Mode=OneWay}"
                                  Command="{Binding NavigateCommand}" CommandParameter="Downloads" />
-                    <RadioButton Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconSettings}" Content="Settings"
+                    <RadioButton AutomationProperties.AutomationId="NavSettingsBtn" Style="{StaticResource NavButtonStyle}" Tag="{StaticResource IconSettings}" Content="Settings"
                                  IsChecked="{Binding IsSettingsActive, Mode=OneWay}"
                                  Command="{Binding NavigateCommand}" CommandParameter="Settings" />
                 </StackPanel>

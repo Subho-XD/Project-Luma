@@ -395,7 +395,9 @@ public sealed class RedesignAndEdgeCaseTests
             var vault = new UserDllVault(repo, logger, Path.Combine(tempRoot, "vault"));
             var orchestrator = new BackendOrchestrator();
             var installer = new TransactionalGameInstaller(new PeAnalyzer(), logger, Path.Combine(tempRoot, "backups"));
-            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orchestrator, installer, logger);
+            string emptyDownloads = Path.Combine(tempRoot, "empty_downloads");
+            Directory.CreateDirectory(emptyDownloads);
+            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orchestrator, installer, logger, emptyDownloads);
 
             var gpu = CreateRx6600Gpu();
             var game = new DiscoveredGame

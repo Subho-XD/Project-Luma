@@ -124,6 +124,7 @@ public partial class App : Application
             () => ExecuteExplicitAppExit(mainWindow));
         _trayService.Attach(mainWindow);
         vm.TrayPreferenceSyncRequested += () => _trayService?.RefreshPreferenceState();
+        vm.ApplicationUpdateRestartRequested += () => Dispatcher.Invoke(() => ExecuteExplicitAppExit(mainWindow));
 
         mainWindow.Closed += (_, _) =>
         {

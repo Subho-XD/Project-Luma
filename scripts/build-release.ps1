@@ -49,8 +49,15 @@ Write-Host "==> 5. Publishing self-contained win-x64 ProjectLuma.App & ProjectLu
 & $Dotnet publish (Join-Path $Root "src\ProjectLuma.App\ProjectLuma.App.csproj") -c Release -r win-x64 --self-contained true -o $DistApp --nologo
 if ($LASTEXITCODE -ne 0) { throw "Publish App failed" }
 
-& $Dotnet publish (Join-Path $Root "src\ProjectLuma.Updater\ProjectLuma.Updater.csproj") -c Release -r win-x64 --self-contained true -o $DistApp --nologo
+$UpdaterTemp = Join-Path $DistDir "UpdaterTemp"
+New-Item -ItemType Directory -Path $UpdaterTemp -Force | Out-Null
+& $Dotnet publish (Join-Path $Root "src\ProjectLuma.Updater\ProjectLuma.Updater.csproj") -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $UpdaterTemp --nologo
 if ($LASTEXITCODE -ne 0) { throw "Publish Updater failed" }
+Copy-Item (Join-Path $UpdaterTemp "ProjectLuma.Updater.exe") (Join-Path $DistApp "ProjectLuma.Updater.exe") -Force
+Remove-Item $UpdaterTemp -Recurse -Force
+
+& (Join-Path $DistApp "ProjectLuma.Updater.exe") --verify-self-test
+if ($LASTEXITCODE -ne 0) { throw "Published ProjectLuma.Updater.exe --verify-self-test failed" }
 
 Write-Host "==> 6. Packaging embedded payload.zip & building standalone single-file Installer -> dist\Installer\"
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
@@ -71,7 +78,9 @@ New-Item -ItemType Directory -Path $NoticesDir -Force | Out-Null
 
 Write-Host "==> 9. Copying release deliverables & third-party notices"
 $ReleaseInstaller = Join-Path $ReleaseDir "ProjectLuma-Setup-x64.exe"
+$ReleaseZip = Join-Path $ReleaseDir "ProjectLuma-v$Version-win-x64.zip"
 Copy-Item $SetupExe $ReleaseInstaller -Force
+Copy-Item $PayloadZip $ReleaseZip -Force
 Copy-Item (Join-Path $Root "assets\fonts\OFL-*.txt") $NoticesDir -Force
 Copy-Item (Join-Path $Root "docs\THIRD_PARTY_LICENSES.md") $NoticesDir -Force
 

@@ -19,6 +19,34 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
     public UpdateCoordinatorStatus Status { get; } = new();
     public event Action<UpdateCoordinatorStatus>? StatusChanged;
 
+    private AppSelfUpdateManager? _selfUpdateManager;
+    private HttpClient? _appHttpClient;
+    private string? _releasesApiUrlOverride;
+    private string? _installDirOverride;
+    private string? _appVersionOverride;
+
+    internal void ConfigureAppSelfUpdater(
+        HttpClient? httpClient = null,
+        string? releasesApiUrl = null,
+        string? currentInstallDirectory = null,
+        string? appVersionOverride = null)
+    {
+        _appHttpClient = httpClient;
+        _releasesApiUrlOverride = releasesApiUrl;
+        _installDirOverride = currentInstallDirectory;
+        _appVersionOverride = appVersionOverride;
+        _selfUpdateManager = new AppSelfUpdateManager(_logger, httpClient, releasesApiUrl, currentInstallDirectory, appVersionOverride);
+    }
+
+    private AppSelfUpdateManager GetSelfUpdateManager()
+        => _selfUpdateManager ??= new AppSelfUpdateManager(_logger, _appHttpClient, _releasesApiUrlOverride, _installDirOverride, _appVersionOverride);
+
+    public Task<AppSelfUpdateStageResult> DownloadAndStageAppUpdateAsync(UpdateCheckItem item, CancellationToken ct = default)
+        => GetSelfUpdateManager().DownloadAndStageAsync(item, ct);
+
+    public bool LaunchSelfUpdater(AppSelfUpdateStageResult stageResult)
+        => GetSelfUpdateManager().LaunchUpdater(stageResult);
+
     public UpdateCoordinatorService(
         IGpuDetector gpuDetector,
         ICompatibilityRepository repo,
@@ -78,23 +106,8 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
             var manifests = await _packageManager.GetManifestsAsync(ct);
             var userDlls = await _repo.LoadUserDllsAsync(ct);
 
-            var items = new List<UpdateCheckItem>
-            {
-                new()
-                {
-                    ComponentId = "project-luma-app",
-                    ComponentName = "Project Luma",
-                    Kind = "Application",
-                    InstalledVersion = settings.AppVersion,
-                    AvailableVersion = settings.AppVersion,
-                    VerificationLevel = VerificationLevel.VerifiedHashAndHttps,
-                    StateBadgeText = "Installed",
-                    Status = "Current release installed (Self-updater ready)",
-                    ActionLabel = string.Empty,
-                    CanApply = false,
-                    CanRollback = false
-                }
-            };
+            var appItem = await GetSelfUpdateManager().CheckForAppUpdateAsync(settings.AppVersion, settings.UpdateChannel, ct);
+            var items = new List<UpdateCheckItem> { appItem };
 
             bool anyNetworkFailure = false;
             int total = Math.Max(1, manifests.Count);
