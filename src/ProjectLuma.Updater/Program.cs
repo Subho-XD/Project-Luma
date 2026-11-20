@@ -112,8 +112,11 @@ public static class Program
                 CopyWithRetry(srcFile, dstFile);
             }
 
-            if (!string.IsNullOrWhiteSpace(exeToHealthCheck) && File.Exists(exeToHealthCheck))
+            if (!string.IsNullOrWhiteSpace(exeToHealthCheck))
             {
+                if (!File.Exists(exeToHealthCheck))
+                    throw new FileNotFoundException($"Expected executable missing after update swap: '{exeToHealthCheck}'.", exeToHealthCheck);
+
                 WriteLog(logPath, $"Running health check on '{exeToHealthCheck}'");
                 var hcPsi = new ProcessStartInfo(exeToHealthCheck, "--health-check")
                 {
@@ -281,16 +284,23 @@ public static class Program
             if (Directory.Exists(Path.Combine(target, ".updater_rollback")))
                 return 13;
 
-            // Verify rollback when missing exe or failing stage happens
+            // Verify rollback when --exe health-check executable is missing
             File.WriteAllText(Path.Combine(stage, "app.txt"), "v3_bad");
+            bool threw = false;
             try
             {
-                ApplyUpdateTransactional(stage, target, exeToHealthCheck: "nonexistent_verify_no_fail");
+                ApplyUpdateTransactional(stage, target, exeToHealthCheck: Path.Combine(target, "missing_app.exe"));
             }
             catch
             {
-                // Ignore if thrown
+                threw = true;
             }
+            if (!threw)
+                return 14;
+            if (File.ReadAllText(Path.Combine(target, "app.txt")) != "v2")
+                return 15;
+            if (Directory.Exists(Path.Combine(target, ".updater_rollback")))
+                return 16;
 
             Console.WriteLine("ProjectLuma.Updater self-test passed.");
             return 0;

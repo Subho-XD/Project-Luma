@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\ProjectLuma.UpdateService\ProjectLuma.UpdateService.csproj" />
     <ProjectReference Include="..\..\src\ProjectLuma.UI\ProjectLuma.UI.csproj" />
     <ProjectReference Include="..\..\src\ProjectLuma.Setup\ProjectLuma.Setup.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.Updater\ProjectLuma.Updater.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="System" />

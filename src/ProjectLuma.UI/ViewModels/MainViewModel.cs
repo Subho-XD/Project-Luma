@@ -93,6 +93,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _hasImportedNeuralDll;
     private bool _isNeuralHubDetected;
     private string _neuralHubExecutablePath = string.Empty;
+    private NeuralHubStatusReport _lastNeuralHubReport = new();
+    private bool _isNeuralDiagnosticsExpanded;
+    private string _neuralHubDiagnosticsText = string.Empty;
+    private string _neuralHubDllSyncSummary = string.Empty;
+    private string _selectedGameNeuralHubSummary = string.Empty;
+    private string _selectedGameNeuralHubConflictDetail = string.Empty;
     private bool _isNeuralCandidateScanBusy;
     private string _neuralCandidateScanSummary = string.Empty;
 
@@ -115,6 +121,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<SetupProgressStep> SetupSteps { get; } = new();
     public ObservableCollection<DiscoveredDllCandidate> DiscoveredNeuralCandidates { get; } = new();
     public ObservableCollection<DiscoveredDllCandidate> DiscoveredSetupCandidates { get; } = new();
+    public ObservableCollection<NeuralHubGameIntegrationStatus> NeuralHubGames { get; } = new();
     public ObservableCollection<string> CustomLibraryPaths { get; } = new();
     public ObservableCollection<LogEntryRecord> RecentLogs { get; } = new();
     public ObservableCollection<string> UpdateHistoryRows { get; } = new();
@@ -184,6 +191,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncRelayCommand RemoveImportedNeuralDllCommand { get; }
     public AsyncRelayCommand<DiscoveredDllCandidate?> UseDiscoveredNeuralCandidateCommand { get; }
     public RelayCommand LaunchNeuralHubCommand { get; }
+    public AsyncRelayCommand VerifyNeuralHubCommand { get; }
+    public RelayCommand ConfigureNeuralHubGameCommand { get; }
+    public RelayCommand ToggleNeuralDiagnosticsCommand { get; }
     public AsyncRelayCommand ScanGameLibrariesForDllsCommand { get; }
     public AsyncRelayCommand AutoDiscoverNowCommand { get; }
     public AsyncRelayCommand<string?> DeleteUserDllCommand { get; }
@@ -381,6 +391,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         RemoveImportedNeuralDllCommand = new AsyncRelayCommand(_ => RemoveImportedNeuralDllAsync());
         UseDiscoveredNeuralCandidateCommand = new AsyncRelayCommand<DiscoveredDllCandidate?>(c => UseDiscoveredNeuralCandidateAsync(c));
         LaunchNeuralHubCommand = new RelayCommand(_ => LaunchOrOpenNeuralHub());
+        VerifyNeuralHubCommand = new AsyncRelayCommand(_ => VerifyNeuralHubInstallationAsync());
+        ConfigureNeuralHubGameCommand = new RelayCommand(_ => ConfigureGameForNeuralHub());
+        ToggleNeuralDiagnosticsCommand = new RelayCommand(_ => ToggleNeuralHubDiagnostics());
         ScanGameLibrariesForDllsCommand = new AsyncRelayCommand(_ => ScanGameLibrariesForDllsAsync());
         AutoDiscoverNowCommand = ScanGameLibrariesForDllsCommand;
         DeleteUserDllCommand = new AsyncRelayCommand<string?>(p => DeleteUserDllAsync(p));
@@ -586,6 +599,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool HasImportedNeuralDll { get => _hasImportedNeuralDll; set => SetProperty(ref _hasImportedNeuralDll, value); }
     public bool IsNeuralHubDetected { get => _isNeuralHubDetected; set => SetProperty(ref _isNeuralHubDetected, value); }
     public string NeuralHubExecutablePath { get => _neuralHubExecutablePath; set => SetProperty(ref _neuralHubExecutablePath, value); }
+    public NeuralHubStatusReport LastNeuralHubReport => _lastNeuralHubReport;
+    public bool IsNeuralDiagnosticsExpanded { get => _isNeuralDiagnosticsExpanded; set => SetProperty(ref _isNeuralDiagnosticsExpanded, value); }
+    public string NeuralHubDiagnosticsText { get => _neuralHubDiagnosticsText; set => SetProperty(ref _neuralHubDiagnosticsText, value); }
+    public string NeuralHubDllSyncSummary { get => _neuralHubDllSyncSummary; set => SetProperty(ref _neuralHubDllSyncSummary, value); }
+    public string SelectedGameNeuralHubSummary { get => _selectedGameNeuralHubSummary; set => SetProperty(ref _selectedGameNeuralHubSummary, value); }
+    public string SelectedGameNeuralHubConflictDetail { get => _selectedGameNeuralHubConflictDetail; set => SetProperty(ref _selectedGameNeuralHubConflictDetail, value); }
     public bool IsNeuralCandidateScanBusy { get => _isNeuralCandidateScanBusy; set { if (SetProperty(ref _isNeuralCandidateScanBusy, value)) CancelNeuralScanCommand.RaiseCanExecuteChanged(); } }
     public string NeuralCandidateScanSummary { get => _neuralCandidateScanSummary; set => SetProperty(ref _neuralCandidateScanSummary, value); }
 
@@ -705,6 +724,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         var byId = manifests.ToDictionary(m => m.Id, StringComparer.OrdinalIgnoreCase);
 
+        var nrManifest = manifests.FirstOrDefault(m => m.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase));
+        var existingVaultedNr = (await _dllVault.GetImportedDllsAsync())
+            .FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+        _lastNeuralHubReport = ProjectLuma.PackageManager.NeuralHubDetector.InspectFullStatus(
+            nrManifest?.StagedInstallPath,
+            existingVaultedNr,
+            AllGames.Select(g => g.Game));
+
         if (ComponentItems.Count == 0)
         {
             foreach (var m in manifests)
@@ -713,7 +740,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     ? byId.GetValueOrDefault(m.ParentComponentId)
                     : null;
                 var row = new BackendComponentItem(m, GpuInfo, parent);
-                await row.RefreshStateFromManifestAsync(GpuInfo, parent);
+                await row.RefreshStateFromManifestAsync(GpuInfo, parent, _lastNeuralHubReport);
                 ComponentItems.Add(row);
             }
         }
@@ -731,7 +758,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                         ? byId.GetValueOrDefault(existing.Manifest.ParentComponentId)
                         : null;
                     if (!existing.IsBusy)
-                        await existing.RefreshStateFromManifestAsync(GpuInfo, parent);
+                        await existing.RefreshStateFromManifestAsync(GpuInfo, parent, _lastNeuralHubReport);
                 }
             }
         }
@@ -1370,27 +1397,66 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         NeuralMinimumVersionRequired = modelReq.MinimumVersion;
 
         var nrManifest = Backends.FirstOrDefault(m => m.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase));
-        var hub = ProjectLuma.PackageManager.NeuralHubDetector.Detect(nrManifest?.StagedInstallPath);
-        IsNeuralHubDetected = hub.IsDetected;
+        var vaultedNr = (await _dllVault.GetImportedDllsAsync())
+            .FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+        var hub = ProjectLuma.PackageManager.NeuralHubDetector.InspectFullStatus(
+            nrManifest?.StagedInstallPath,
+            vaultedNr,
+            AllGames.Select(g => g.Game));
+        _lastNeuralHubReport = hub;
+
+        bool hubReady = hub.IsAppDetected && hub.IsRuntimeVerified;
+        IsNeuralHubDetected = hubReady;
         NeuralHubExecutablePath = hub.ExecutablePath;
+        NeuralHubDiagnosticsText = hub.DiagnosticsSummary;
+        NeuralHubDllSyncSummary = hub.DllSyncSummary;
+
+        NeuralHubGames.Clear();
+        foreach (var g in hub.RegisteredGames)
+            NeuralHubGames.Add(g);
+
+        var nrComponent = ComponentItems.FirstOrDefault(c => c.IsNeuralRenderingComponent);
+        if (nrComponent != null && !nrComponent.IsBusy)
+            await nrComponent.RefreshStateFromManifestAsync(GpuInfo, null, hub);
 
         var report = await _dllVault.VerifyImportedDllAsync("nvngx_dlssnr.dll", SelectedNeuralImportModel);
         bool hasVaulted = report.Status != DllValidationStatus.NotImported;
+        bool hasNeuralHubDll = hub.IsDllImportedInNeuralHub;
         HasImportedNeuralDll = hasVaulted;
-        NeuralImportStatusText = hasVaulted ? "Imported" : "Not imported";
-        NeuralDetectedVersion = string.IsNullOrWhiteSpace(report.DetectedVersion) ? "Not detected" : report.DetectedVersion;
-        NeuralValidationStatusText = string.IsNullOrWhiteSpace(report.StatusLabel) ? report.Status.ToString() : report.StatusLabel;
-        NeuralValidationDetailText = hasVaulted
-            ? $"{report.Message} Vault: {_dllVault.NeuralRenderingVaultDirectory}"
-            : "Select a legitimate NVIDIA Neural Rendering DLL that you are authorized to use. Project Luma will validate the file and check whether it is compatible with your selected Neural Rendering model.";
+        NeuralImportStatusText = hasVaulted
+            ? (hub.IsVaultSynchronizedWithNeuralHub ? "Imported (Synchronized with NeuralHub)" : "Imported")
+            : (hasNeuralHubDll ? "Imported in NeuralHub" : "Not imported");
 
-        NeuralLocalInstallationStatusText = hub.IsDetected
-            ? (hasVaulted
-                ? $"DLL vaulted + {hub.Summary}"
-                : $"{hub.Summary} Import nvngx_dlssnr.dll to complete setup.")
+        string effectiveVer = !string.IsNullOrWhiteSpace(report.DetectedVersion)
+            ? report.DetectedVersion
+            : (hasNeuralHubDll ? hub.NeuralHubDllVersion : string.Empty);
+        NeuralDetectedVersion = string.IsNullOrWhiteSpace(effectiveVer) ? "Not detected" : effectiveVer;
+
+        if (hasVaulted)
+        {
+            NeuralValidationStatusText = string.IsNullOrWhiteSpace(report.StatusLabel) ? report.Status.ToString() : report.StatusLabel;
+            NeuralValidationDetailText = hub.IsVaultSynchronizedWithNeuralHub
+                ? $"{report.Message} Matches NeuralHub store SHA-256 ({hub.NeuralHubDllSha256[..12]}...) — no duplicate copy needed. Vault: {_dllVault.NeuralRenderingVaultDirectory}"
+                : $"{report.Message} Vault: {_dllVault.NeuralRenderingVaultDirectory}";
+        }
+        else if (hasNeuralHubDll)
+        {
+            NeuralValidationStatusText = "Verified in NeuralHub Store";
+            NeuralValidationDetailText = $"{hub.NeuralHubDllFileName} v{hub.NeuralHubDllVersion} [{hub.NeuralHubSupportedModels}] detected inside {hub.StorePath}\\data\\ (SHA-256: {hub.NeuralHubDllSha256[..12]}...). Project Luma recognizes it directly without duplicating files.";
+        }
+        else
+        {
+            NeuralValidationStatusText = string.IsNullOrWhiteSpace(report.StatusLabel) ? report.Status.ToString() : report.StatusLabel;
+            NeuralValidationDetailText = "Select a legitimate NVIDIA Neural Rendering DLL that you are authorized to use. Project Luma will validate the file and check whether it is compatible with your selected Neural Rendering model.";
+        }
+
+        NeuralLocalInstallationStatusText = hubReady
+            ? $"{hub.StatusHeadline} · {hub.DllSyncSummary}"
             : (hasVaulted
-                ? $"nvngx_dlssnr.dll v{NeuralDetectedVersion} vaulted; NeuralHub v0.9.0 handoff still required ({reqManifest.OfficialReleaseUrl})."
-                : $"Not imported · {hub.Summary}");
+                ? $"nvngx_dlssnr.dll v{NeuralDetectedVersion} vaulted; NeuralHub v0.9.0 not detected yet ({reqManifest.OfficialReleaseUrl})."
+                : $"Not imported · {hub.StatusHeadline}");
+
+        RefreshSelectedGameNeuralHubSummary();
     }
 
     private async Task ImportNvidiaDllAsync()
@@ -1526,7 +1592,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(NeuralHubExecutablePath) { UseShellExecute = true });
-                ShowToast("Launched NeuralHub. Import nvngx_dlssnr.dll inside NeuralHub.");
+                ShowToast(_lastNeuralHubReport.IsDllImportedInNeuralHub
+                    ? $"Opened NeuralHub {(_lastNeuralHubReport.RuntimeVersion.Length > 0 ? _lastNeuralHubReport.RuntimeVersion : "v0.9.0")}."
+                    : "Launched NeuralHub. Import nvngx_dlssnr.dll inside NeuralHub.");
                 return;
             }
             catch { }
@@ -1536,6 +1604,67 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _dialogs.OpenUrl(url);
         StartDownloadsFolderWatcher();
         ShowToast("Opened official DLSS-NR-on-AMD v0.9.0 release page.");
+    }
+
+    private async Task VerifyNeuralHubInstallationAsync()
+    {
+        ProjectLuma.Core.Services.NeuralHubInspector.InvalidateCache();
+        await ReloadCatalogsAsync();
+        await RefreshSelectedGameComponentsAsync();
+        if (IsNeuralHubDetected)
+        {
+            ShowToast($"Verified {_lastNeuralHubReport.StatusHeadline} ({_lastNeuralHubReport.DllSyncSummary}).");
+        }
+        else
+        {
+            ActionAlertMessage = "NeuralHub v0.9.0 installation was not detected in %LOCALAPPDATA%\\Danielblnc\\NeuralHub or HKCU\\Software\\Danielblnc\\NeuralHub.";
+        }
+    }
+
+    private void ConfigureGameForNeuralHub()
+    {
+        var nrComponent = ComponentItems.FirstOrDefault(c => c.IsNeuralRenderingComponent);
+        if (nrComponent != null)
+            nrComponent.IsDetailsExpanded = true;
+
+        var preferred = SelectedGame ?? AllGames.FirstOrDefault(g =>
+            _lastNeuralHubReport.RegisteredGames.Any(rg => rg.GameName.Contains(g.Title, StringComparison.OrdinalIgnoreCase)))
+            ?? AllGames.FirstOrDefault();
+
+        if (preferred != null)
+        {
+            SelectedGame = preferred;
+            FeaturedGame = preferred;
+            ActivePage = LumaPage.GameDetails;
+            ShowToast(!string.IsNullOrWhiteSpace(SelectedGameNeuralHubConflictDetail)
+                ? SelectedGameNeuralHubConflictDetail
+                : $"Inspecting NeuralHub configuration for {preferred.Title}.");
+            return;
+        }
+
+        LaunchOrOpenNeuralHub();
+    }
+
+    private void ToggleNeuralHubDiagnostics()
+    {
+        var nrComponent = ComponentItems.FirstOrDefault(c => c.IsNeuralRenderingComponent);
+        if (nrComponent != null)
+            nrComponent.IsDetailsExpanded = true;
+        IsNeuralDiagnosticsExpanded = !IsNeuralDiagnosticsExpanded;
+    }
+
+    private void RefreshSelectedGameNeuralHubSummary()
+    {
+        if (SelectedGame == null)
+        {
+            SelectedGameNeuralHubSummary = string.Empty;
+            SelectedGameNeuralHubConflictDetail = string.Empty;
+            return;
+        }
+
+        var status = ProjectLuma.PackageManager.NeuralHubDetector.InspectGameIntegration(SelectedGame.Game, _lastNeuralHubReport);
+        SelectedGameNeuralHubSummary = status.StatusSummary;
+        SelectedGameNeuralHubConflictDetail = status.HasOptiScalerProxyConflict ? status.ConflictDetail : string.Empty;
     }
 
     private async Task DeleteUserDllAsync(string? fileName)
@@ -2097,6 +2226,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(AvailableUpscalingPresets));
         OnPropertyChanged(nameof(AvailableFrameGenEngines));
+        RefreshSelectedGameNeuralHubSummary();
     }
 
     private void ApplyUpdateStatus(UpdateCoordinatorStatus status)

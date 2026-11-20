@@ -25,7 +25,13 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
     private string? _installDirOverride;
     private string? _appVersionOverride;
 
-    internal void ConfigureAppSelfUpdater(
+    public void ConfigureNeuralHubProbe(NeuralHubProbeOptions? options)
+    {
+        if (_packageManager is ProjectLuma.PackageManager.GitHubPackageManager gpm)
+            gpm.ConfigureNeuralHubProbe(options);
+    }
+
+    public void ConfigureAppSelfUpdater(
         HttpClient? httpClient = null,
         string? releasesApiUrl = null,
         string? currentInstallDirectory = null,
@@ -197,10 +203,12 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
                             item.Status = hasDiskFiles
                                 ? (isUpdate
                                     ? $"Local {installedVersion} installed · {release.TagName} on GitHub"
-                                    : $"Linked local installation ({installedVersion})")
+                                    : $"NeuralHub {installedVersion} — Installed and detected")
                                 : $"Upstream {release.TagName} on GitHub (Personal non-commercial license)";
-                            item.ReasonText = "Custom license forbids third-party bundling. Open official release and Project Luma detects your download automatically.";
-                            item.ActionLabel = "Official Release";
+                            item.ReasonText = hasDiskFiles && !isUpdate
+                                ? "External NeuralHub runtime detected and verified."
+                                : "Custom license forbids third-party bundling. Open official release and Project Luma detects your download automatically.";
+                            item.ActionLabel = hasDiskFiles && !isUpdate ? "Verify" : "Official Release";
                             item.CanApply = true;
                         }
                         else if (!hasDiskFiles)

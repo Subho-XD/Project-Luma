@@ -14,6 +14,7 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
     private readonly IGameInstaller _installer;
     private readonly ILumaLogger _logger;
     private readonly string? _defaultDownloadsDirectory;
+    private readonly NeuralHubProbeOptions? _neuralHubProbeOptions;
 
     public IntelligentComponentResolver(
         IPackageManager packageManager,
@@ -22,7 +23,8 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         IBackendOrchestrator orchestrator,
         IGameInstaller installer,
         ILumaLogger logger,
-        string? defaultDownloadsDirectory = null)
+        string? defaultDownloadsDirectory = null,
+        NeuralHubProbeOptions? neuralHubProbeOptions = null)
     {
         _packageManager = packageManager;
         _dllVault = dllVault;
@@ -31,6 +33,7 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         _installer = installer;
         _logger = logger;
         _defaultDownloadsDirectory = defaultDownloadsDirectory;
+        _neuralHubProbeOptions = neuralHubProbeOptions;
     }
 
     public async Task<ComponentResolutionPlan> AnalyzeRequirementsAsync(
@@ -71,20 +74,22 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
                 plan.BackendId = "dlss-nr-on-amd";
 
             var nrManifest = manifests.FirstOrDefault(m => m.Id == "dlss-nr-on-amd");
-            var hubInfo = NeuralHubDetector.Detect(nrManifest?.StagedInstallPath);
-            bool nrBackendStaged = (nrManifest != null && NeuralHubDetector.HasRuntimeBinaryPayload(nrManifest.StagedInstallPath)) || hubInfo.IsDetected;
-            bool hasNrDllInVault = userDlls.Any(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+            var existingNrVault = userDlls.FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+            var hubReport = NeuralHubDetector.InspectFullStatus(nrManifest?.StagedInstallPath, existingNrVault, new[] { game }, _neuralHubProbeOptions);
+            bool nrBackendStaged = (nrManifest != null && NeuralHubDetector.HasRuntimeBinaryPayload(nrManifest.StagedInstallPath)) || (hubReport.IsAppDetected && hubReport.IsRuntimeVerified);
+            bool hasNrDllAny = existingNrVault != null || hubReport.IsDllImportedInNeuralHub;
 
-            if (profile.EnableNeuralRendering && (!nrBackendStaged || !hasNrDllInVault))
+            if (profile.EnableNeuralRendering && (!nrBackendStaged || !hasNrDllAny))
             {
                 await AutoDiscoverDownloadedComponentsAsync(
                     additionalGameDirs: new[] { game.InstallDirectory, game.ExecutableDirectory },
                     ct: ct);
                 manifests = await _packageManager.GetManifestsAsync(ct);
                 nrManifest = manifests.FirstOrDefault(m => m.Id == "dlss-nr-on-amd");
-                hubInfo = NeuralHubDetector.Detect(nrManifest?.StagedInstallPath);
-                nrBackendStaged = (nrManifest != null && NeuralHubDetector.HasRuntimeBinaryPayload(nrManifest.StagedInstallPath)) || hubInfo.IsDetected;
                 userDlls = await _dllVault.GetImportedDllsAsync(ct);
+                existingNrVault = userDlls.FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+                hubReport = NeuralHubDetector.InspectFullStatus(nrManifest?.StagedInstallPath, existingNrVault, new[] { game }, _neuralHubProbeOptions);
+                nrBackendStaged = (nrManifest != null && NeuralHubDetector.HasRuntimeBinaryPayload(nrManifest.StagedInstallPath)) || (hubReport.IsAppDetected && hubReport.IsRuntimeVerified);
             }
 
             plan.Components.Add(new ComponentRequirementItem
@@ -96,8 +101,8 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
                 IsSatisfied = nrBackendStaged,
                 CanDownloadAutomatically = false,
                 OfficialGuidanceUrl = nrManifest?.OfficialReleasesPageUrl ?? "https://github.com/danielblnc/DLSS-NR-on-AMD/releases",
-                ActionPrompt = nrBackendStaged ? $"Connected ({(hubInfo.IsDetected ? hubInfo.InstallDirectory : nrManifest?.CurrentInstalledVersion)})" : "Open official GitHub release; install NeuralHub v0.9.0",
-                TechnicalDetail = hubInfo.IsDetected ? hubInfo.Summary : (nrBackendStaged ? $"Staged cleanly at {nrManifest?.StagedInstallPath}" : "Not bundled due to personal non-commercial license restrictions; source-only archives without runtime binaries do not satisfy this step")
+                ActionPrompt = nrBackendStaged ? hubReport.StatusHeadline : "Open official GitHub release; install NeuralHub v0.9.0",
+                TechnicalDetail = hubReport.IsAppDetected ? hubReport.DiagnosticsSummary : (nrBackendStaged ? $"Staged cleanly at {nrManifest?.StagedInstallPath}" : "Not bundled due to personal non-commercial license restrictions; source-only archives without runtime binaries do not satisfy this step")
             });
 
             if (gpu.Architecture == GpuArchitecture.RDNA2)
@@ -121,21 +126,28 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
                 });
             }
 
-            // Check imported or already auto-discovered user-owned nvngx_dlssnr.dll against selected model
+            // Check imported Vault copy OR NeuralHub data\index.ini imported nvngx_dlssnr.dll against selected model
             var reqManifest = _dllVault.GetNeuralRequirementsManifest();
             var modelReq = reqManifest.GetModelRequirement(profile.SelectedNeuralModel);
-            var validNr = userDlls.FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
-            bool modelSatisfied = validNr != null &&
-                                  (profile.SelectedNeuralModel == NeuralRenderingModelType.CC
-                                      ? validNr.SupportsCcModel
-                                      : (validNr.SupportsHtModel || (UserDllVault.ParseNormalizedVersion(validNr.FileVersion) >= new Version(310, 8, 0, 0))));
-            string modelNote = validNr == null
-                ? "Not found in DLL Vault, game libraries, or Downloads yet"
+            var validNr = existingNrVault;
+            string effectiveVer = validNr?.FileVersion ?? (hubReport.IsDllImportedInNeuralHub ? hubReport.NeuralHubDllVersion : string.Empty);
+            bool effectiveCc = (validNr?.SupportsCcModel == true) ||
+                               (hubReport.IsDllImportedInNeuralHub && UserDllVault.ParseNormalizedVersion(hubReport.NeuralHubDllVersion) >= new Version(310, 9, 16, 0));
+            bool effectiveHt = (validNr?.SupportsHtModel == true) ||
+                               (UserDllVault.ParseNormalizedVersion(effectiveVer) >= new Version(310, 8, 0, 0));
+
+            bool hasAnyNrDll = validNr != null || hubReport.IsDllImportedInNeuralHub;
+            bool modelSatisfied = hasAnyNrDll && (profile.SelectedNeuralModel == NeuralRenderingModelType.CC ? effectiveCc : effectiveHt);
+            string locationLabel = validNr != null && hubReport.IsVaultSynchronizedWithNeuralHub
+                ? "NeuralHub & Vault synchronized"
+                : (validNr != null ? "Project Luma Vault" : "NeuralHub DLL store");
+            string modelNote = !hasAnyNrDll
+                ? "Not found in NeuralHub store, DLL Vault, game libraries, or Downloads yet"
                 : modelSatisfied
-                    ? (validNr.SupportsCcModel
-                        ? $"Verified v{validNr.FileVersion} (CC & HT models supported)"
-                        : $"Verified v{validNr.FileVersion} (HT model ready; >= {reqManifest.GetModelRequirement(NeuralRenderingModelType.CC).MinimumVersion} needed for CC model)")
-                    : $"Imported v{validNr.FileVersion} does not meet {profile.SelectedNeuralModel} requirement (>= {modelReq.MinimumVersion})";
+                    ? (effectiveCc
+                        ? $"Verified v{effectiveVer} via {locationLabel} (CC & HT models supported)"
+                        : $"Verified v{effectiveVer} via {locationLabel} (HT model ready; >= {reqManifest.GetModelRequirement(NeuralRenderingModelType.CC).MinimumVersion} needed for CC model)")
+                    : $"Imported v{effectiveVer} does not meet {profile.SelectedNeuralModel} requirement (>= {modelReq.MinimumVersion})";
 
             plan.Components.Add(new ComponentRequirementItem
             {
@@ -220,18 +232,21 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         ct.ThrowIfCancellationRequested();
         var manifests = await _packageManager.GetManifestsAsync(ct);
         var nrManifest = manifests.FirstOrDefault(m => m.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase));
-        var hub = NeuralHubDetector.Detect(nrManifest?.StagedInstallPath);
+        var existingVaulted = (await _dllVault.GetImportedDllsAsync(ct))
+            .FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+        var hubReport = NeuralHubDetector.InspectFullStatus(nrManifest?.StagedInstallPath, existingVaulted, new[] { game }, _neuralHubProbeOptions);
+        bool hubDetected = hubReport.IsAppDetected && hubReport.IsRuntimeVerified;
         result.NeuralHub = new NeuralHubDetectionResultInfo
         {
-            IsDetected = hub.IsDetected,
-            InstallDirectory = hub.InstallDirectory,
-            ExecutablePath = hub.ExecutablePath,
-            Version = hub.Version,
-            Summary = hub.Summary
+            IsDetected = hubDetected,
+            InstallDirectory = hubReport.StorePath,
+            ExecutablePath = hubReport.ExecutablePath,
+            Version = string.IsNullOrWhiteSpace(hubReport.RuntimeVersion) ? hubReport.AppVersion : hubReport.RuntimeVersion,
+            Summary = hubReport.StatusHeadline
         };
-        if (hub.IsDetected)
+        if (hubDetected)
         {
-            Report("backend", "Checking Neural Rendering backend", SetupStepState.Complete, hub.Summary);
+            Report("backend", "Checking Neural Rendering backend", SetupStepState.Complete, hubReport.StatusHeadline);
         }
         else
         {
@@ -255,7 +270,9 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         // 5. Scanning Downloads (bounded depth <= 3)
         Report("dlscan", "Scanning Downloads", SetupStepState.InProgress, "Checking user Downloads folder");
         ct.ThrowIfCancellationRequested();
-        string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        string downloadsDir = !string.IsNullOrWhiteSpace(_defaultDownloadsDirectory)
+            ? _defaultDownloadsDirectory
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
         var dlCandidates = Directory.Exists(downloadsDir)
             ? await _dllVault.DiscoverCandidateDllsAsync(new[] { downloadsDir }, "Downloads", profile.SelectedNeuralModel, 3, ct)
             : Array.Empty<DiscoveredDllCandidate>();
@@ -265,12 +282,26 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
             nrDlCandidates.Count > 0 ? $"Found {nrDlCandidates.Count} nvngx_dlssnr.dll candidate(s) in Downloads" : "No nvngx_dlssnr.dll found in Downloads");
 
         // 6. Validating model DLL
-        Report("dll", "Validating model DLL", SetupStepState.InProgress, $"Checking vault for nvngx_dlssnr.dll ({profile.SelectedNeuralModel} model)");
+        Report("dll", "Validating model DLL", SetupStepState.InProgress, $"Checking NeuralHub & Vault for nvngx_dlssnr.dll ({profile.SelectedNeuralModel} model)");
         ct.ThrowIfCancellationRequested();
         var vaultedReport = await _dllVault.VerifyImportedDllAsync("nvngx_dlssnr.dll", profile.SelectedNeuralModel, ct);
+        bool nhDllSatisfied = hubReport.IsDllImportedInNeuralHub &&
+            (profile.SelectedNeuralModel == NeuralRenderingModelType.CC
+                ? UserDllVault.ParseNormalizedVersion(hubReport.NeuralHubDllVersion) >= new Version(310, 9, 16, 0)
+                : UserDllVault.ParseNormalizedVersion(hubReport.NeuralHubDllVersion) >= new Version(310, 8, 0, 0));
+        bool anyDllReady = vaultedReport.IsAcceptableForImport || nhDllSatisfied;
+
         if (vaultedReport.IsAcceptableForImport)
         {
-            Report("dll", "Validating model DLL", SetupStepState.Complete, vaultedReport.Message);
+            Report("dll", "Validating model DLL", SetupStepState.Complete,
+                hubReport.IsVaultSynchronizedWithNeuralHub
+                    ? $"{vaultedReport.Message} (Synchronized with NeuralHub)"
+                    : vaultedReport.Message);
+        }
+        else if (nhDllSatisfied)
+        {
+            Report("dll", "Validating model DLL", SetupStepState.Complete,
+                $"Verified inside NeuralHub store: nvngx_dlssnr.dll v{hubReport.NeuralHubDllVersion} ({hubReport.NeuralHubSupportedModels}) — no Vault duplication needed.");
         }
         else if (result.DiscoveredCandidates.Any(c => c.CanImport))
         {
@@ -315,7 +346,7 @@ public sealed class IntelligentComponentResolver : IIntelligentComponentResolver
         }
 
         result.Plan = await AnalyzeRequirementsAsync(game, profile, gpu, ct);
-        result.IsReadyToEnable = blockers.Count == 0 && gpuSupported && gameOk && hub.IsDetected && vaultedReport.IsAcceptableForImport && runtimeOk;
+        result.IsReadyToEnable = blockers.Count == 0 && gpuSupported && gameOk && hubDetected && anyDllReady && runtimeOk;
         result.BlockerSummary = blockers.Count == 0
             ? "All AI Visuals prerequisites are verified and ready."
             : string.Join(" ", blockers);

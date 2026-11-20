@@ -385,7 +385,7 @@ public sealed class SqliteCompatibilityRepository : ICompatibilityRepository
 
     private static AppSettingsModel EnsureSettingDefaults(AppSettingsModel model)
     {
-        model.AppVersion = "3.3.0";
+        model.AppVersion = "3.3.1";
         if (string.IsNullOrWhiteSpace(model.BackupRootPath))
         {
             model.BackupRootPath = LumaPaths.GetSubdirectory("backups");

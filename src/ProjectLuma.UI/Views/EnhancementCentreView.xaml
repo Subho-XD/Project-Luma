@@ -63,7 +63,8 @@
                                             <Border Background="{Binding InstallState, Converter={StaticResource ComponentStateBrushConverter}, ConverterParameter=bg}"
                                                     BorderBrush="{Binding InstallState, Converter={StaticResource ComponentStateBrushConverter}}"
                                                     BorderThickness="1" CornerRadius="{StaticResource RadiusBadge}" Padding="8,2" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <TextBlock Text="{Binding InstallStateLabel}" FontFamily="{StaticResource FontUi}" FontSize="11.5" FontWeight="SemiBold"
+                                                <TextBlock AutomationProperties.AutomationId="{Binding Id, StringFormat=ComponentStatus_{0}}"
+                                                           Text="{Binding InstallStateLabel}" FontFamily="{StaticResource FontUi}" FontSize="11.5" FontWeight="SemiBold"
                                                            Foreground="{Binding InstallState, Converter={StaticResource ComponentStateBrushConverter}}" />
                                             </Border>
                                             <Border Background="{StaticResource SurfaceSecondaryBrush}" BorderBrush="{StaticResource BorderHairlineBrush}" BorderThickness="1"
@@ -78,7 +79,8 @@
                                         <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
                                             <TextBlock Text="{Binding SupportedGamesSummary, StringFormat=Games: {0}}" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,16,0" />
                                             <TextBlock Text="{Binding GpuSupportSummary, StringFormat=AMD GPUs: {0}}" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,16,0" />
-                                            <TextBlock Text="{Binding CurrentInstalledVersion, StringFormat=Version: {0}}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <TextBlock AutomationProperties.AutomationId="{Binding Id, StringFormat=ComponentVersion_{0}}"
+                                                       Text="{Binding CurrentInstalledVersion, StringFormat=Version: {0}}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" />
                                         </WrapPanel>
                                     </StackPanel>
 
@@ -90,13 +92,21 @@
                                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                                                     Command="{Binding DataContext.DownloadBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
 
-                                            <!-- Restricted upstream guidance (DLSS-NR-on-AMD: open official release or locate user copy) -->
+                                            <!-- Restricted upstream guidance when NOT installed yet -->
                                             <Button Content="Official Release" Style="{StaticResource LumaSecondaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
-                                                    Visibility="{Binding IsExternalAcquisition, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Visibility="{Binding ShowExternalAcquireButtons, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.DownloadBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                                             <Button Content="Locate Local Copy" Style="{StaticResource LumaSecondaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
-                                                    Visibility="{Binding IsExternalAcquisition, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Visibility="{Binding ShowExternalAcquireButtons, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.ConnectLocalBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+
+                                            <!-- Verified external NeuralHub v0.9.0 controls (no duplicate reinstall prompts) -->
+                                            <Button AutomationProperties.AutomationId="NeuralHubOpenBtn" Content="Open NeuralHub" Style="{StaticResource LumaPrimaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
+                                                    Visibility="{Binding IsExternalNeuralHubInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Command="{Binding DataContext.LaunchNeuralHubCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                            <Button AutomationProperties.AutomationId="NeuralHubVerifyBtn" Content="Verify Installation" Style="{StaticResource LumaSecondaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
+                                                    Visibility="{Binding IsExternalNeuralHubInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Command="{Binding DataContext.VerifyNeuralHubCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
 
                                             <!-- Driver-managed guidance (AFMF 2.1) -->
                                             <Button Content="Configure in Adrenalin" Style="{StaticResource LumaSecondaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="14,0" Margin="0,0,8,0"
@@ -112,14 +122,20 @@
                                             <Button Content="Cancel" Style="{StaticResource LumaDangerButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0"
                                                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.CancelBackendDownloadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            <Button AutomationProperties.AutomationId="NeuralHubConfigureGameBtn" Content="Configure Game" Style="{StaticResource LumaSecondaryButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0"
+                                                    Visibility="{Binding IsExternalNeuralHubInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Command="{Binding DataContext.ConfigureNeuralHubGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                            <Button AutomationProperties.AutomationId="NeuralHubDiagnosticsBtn" Content="View Diagnostics" Style="{StaticResource LumaSecondaryButtonStyle}" Height="28" Padding="10,0"
+                                                    Visibility="{Binding IsExternalNeuralHubInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Command="{Binding DataContext.ToggleNeuralDiagnosticsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                                             <Button Content="Verify" Style="{StaticResource LumaSecondaryButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0"
-                                                    Visibility="{Binding CanRepairOrVerify, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Visibility="{Binding ShowInternalVerifyRepair, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.VerifyBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                                             <Button Content="Repair" Style="{StaticResource LumaSecondaryButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0"
-                                                    Visibility="{Binding CanRepairOrVerify, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Visibility="{Binding ShowInternalVerifyRepair, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.RepairBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                                             <Button Content="Remove" Style="{StaticResource LumaDangerButtonStyle}" Height="28" Padding="10,0"
-                                                    Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Visibility="{Binding ShowInternalRemove, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Command="{Binding DataContext.RemoveBackendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                                         </StackPanel>
                                     </StackPanel>
@@ -221,14 +237,48 @@
                                                     <Button Content="Cancel Scan" Style="{StaticResource LumaDangerButtonStyle}" Height="30" FontSize="12" Padding="12,0" Margin="0,0,8,8"
                                                             Visibility="{Binding DataContext.IsNeuralCandidateScanBusy, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
                                                             Command="{Binding DataContext.CancelNeuralScanCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
-                                                    <Button Content="Open NeuralHub" Style="{StaticResource LumaSecondaryButtonStyle}" Height="30" FontSize="12" Padding="12,0" Margin="0,0,0,8"
+                                                    <Button Content="Open NeuralHub" Style="{StaticResource LumaSecondaryButtonStyle}" Height="30" FontSize="12" Padding="12,0" Margin="0,0,8,8"
                                                             Visibility="{Binding DataContext.IsNeuralHubDetected, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
                                                             Command="{Binding DataContext.LaunchNeuralHubCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Content="Verify Installation" Style="{StaticResource LumaSecondaryButtonStyle}" Height="30" FontSize="12" Padding="12,0" Margin="0,0,8,8"
+                                                            Visibility="{Binding DataContext.IsNeuralHubDetected, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                            Command="{Binding DataContext.VerifyNeuralHubCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Content="View Diagnostics" Style="{StaticResource LumaSecondaryButtonStyle}" Height="30" FontSize="12" Padding="12,0" Margin="0,0,0,8"
+                                                            Visibility="{Binding DataContext.IsNeuralHubDetected, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                            Command="{Binding DataContext.ToggleNeuralDiagnosticsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                                                 </WrapPanel>
 
                                                 <TextBlock Text="{Binding DataContext.NeuralCandidateScanSummary, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                            Visibility="{Binding DataContext.NeuralCandidateScanSummary, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
                                                            FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                                <!-- Per-game NeuralHub Integration & OptiScaler Conflict Inspection -->
+                                                <ItemsControl ItemsSource="{Binding DataContext.NeuralHubGames, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="0,4,0,8">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{StaticResource SurfaceWellBrush}" BorderBrush="{StaticResource BorderHairlineBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusButton}" Padding="10" Margin="0,4,0,0">
+                                                                <StackPanel>
+                                                                    <WrapPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding GameName}" FontFamily="{StaticResource FontUi}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,10,0" />
+                                                                        <TextBlock Text="{Binding ExpectedProxyDll, StringFormat=Proxy: {0}}" FontFamily="{StaticResource FontMono}" FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                                                                    </WrapPanel>
+                                                                    <TextBlock Text="{Binding StatusSummary}" FontFamily="{StaticResource FontUi}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                                    <TextBlock Text="{Binding ConflictDetail}" Visibility="{Binding HasOptiScalerProxyConflict, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                               FontFamily="{StaticResource FontUi}" FontSize="11.5" Foreground="{StaticResource StatusExperimentalBrush}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <!-- Collapsible Read-Only 7-State Diagnostics -->
+                                                <Border Visibility="{Binding DataContext.IsNeuralDiagnosticsExpanded, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        Background="{StaticResource SurfaceWellBrush}" BorderBrush="{StaticResource BorderEmphasisBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusButton}" Padding="12" Margin="0,4,0,8">
+                                                    <TextBox AutomationProperties.AutomationId="NeuralHubDiagnosticsText"
+                                                             Text="{Binding DataContext.NeuralHubDiagnosticsText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"
+                                                             IsReadOnly="True" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}"
+                                                             FontFamily="{StaticResource FontMono}" FontSize="11" TextWrapping="Wrap" AcceptsReturn="True" />
+                                                </Border>
 
                                                 <ItemsControl ItemsSource="{Binding DataContext.DiscoveredNeuralCandidates, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                     <ItemsControl.ItemTemplate>

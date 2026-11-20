@@ -52,7 +52,7 @@ public sealed class AppSettingsModel
     public bool LaunchOnWindowsStartup { get; set; } = false;
     public bool MinimizeToTray { get; set; } = false;
     public bool CompactDensity { get; set; } = false;
-    public string AppVersion { get; set; } = "3.3.0";
+    public string AppVersion { get; set; } = "3.3.1";
     public bool HasCompletedOnboarding { get; set; } = false;
     public bool EnableRemoteArtworkLookup { get; set; } = true;
     public bool SteamGridDbKeyConfigured { get; set; } = false;

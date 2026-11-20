@@ -259,6 +259,12 @@
                                 <TextBlock Text="{Binding SelectedGame.NeuralUnavailableReason}"
                                            Visibility="{Binding SelectedGame.NeuralUnavailableReason, Converter={StaticResource BoolToVisibilityConverter}}"
                                            FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource StatusExperimentalBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                                <TextBlock Text="{Binding SelectedGameNeuralHubSummary, StringFormat=NeuralHub Status: {0}}"
+                                           Visibility="{Binding SelectedGameNeuralHubSummary, Converter={StaticResource BoolToVisibilityConverter}}"
+                                           FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                <TextBlock Text="{Binding SelectedGameNeuralHubConflictDetail}"
+                                           Visibility="{Binding SelectedGameNeuralHubConflictDetail, Converter={StaticResource BoolToVisibilityConverter}}"
+                                           FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource StatusExperimentalBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
                                             Visibility="{Binding SelectedGame.ShowFindRequiredComponents, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Button Content="Find Required Components" Style="{StaticResource LumaSecondaryButtonStyle}" Height="30" FontSize="12" Padding="14,0"

@@ -39,7 +39,7 @@ public sealed class GpuAndCapabilityTests
     [Fact]
     public void CapabilityEngine_Rx6600_Reports_Honest_Neural_And_Gates_RayReconstruction_And_DlssFg()
     {
-        var engine = new CapabilityEngine();
+        var engine = new CapabilityEngine(NeuralHubProbeOptions.Disabled);
         var gpu = new DetectedGpuInfo
         {
             Manufacturer = "AMD",

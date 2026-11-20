@@ -1,19 +1,27 @@
 using ProjectLuma.Core.Enums;
 using ProjectLuma.Core.Interfaces;
 using ProjectLuma.Core.Models;
+using ProjectLuma.Core.Services;
 
 namespace ProjectLuma.Compatibility;
 
 /// <summary>Evaluates hardware and per-game capabilities independently across all four rendering pillars.</summary>
 public sealed class CapabilityEngine : ICapabilityEngine
 {
+    private readonly NeuralHubProbeOptions? _neuralHubProbeOptions;
+
+    public CapabilityEngine(NeuralHubProbeOptions? neuralHubProbeOptions = null)
+    {
+        _neuralHubProbeOptions = neuralHubProbeOptions;
+    }
+
     public HardwareCapabilityProfile EvaluateHardware(
         DetectedGpuInfo gpu,
         IReadOnlyCollection<UserImportedDllRecord> userDlls,
         IReadOnlyCollection<BackendManifest> manifests,
         UpdateChannel channel)
     {
-        var nrEval = EvaluateNeuralRendering(gpu, null, userDlls, channel);
+        var nrEval = EvaluateNeuralRendering(gpu, null, userDlls, channel, _neuralHubProbeOptions);
         var srEval = EvaluateSuperResolution(gpu, null, userDlls, channel);
         var fgEval = EvaluateFrameGeneration(gpu, null, userDlls, channel);
         var rrEval = EvaluateRayReconstruction(gpu, null, userDlls, channel);
@@ -49,7 +57,7 @@ public sealed class CapabilityEngine : ICapabilityEngine
         CompatibilitySeedProfile? seedProfile,
         UpdateChannel channel)
     {
-        var nrEval = EvaluateNeuralRendering(gpu, game, userDlls, channel);
+        var nrEval = EvaluateNeuralRendering(gpu, game, userDlls, channel, _neuralHubProbeOptions);
         var srEval = EvaluateSuperResolution(gpu, game, userDlls, channel);
         var fgEval = EvaluateFrameGeneration(gpu, game, userDlls, channel);
         var rrEval = EvaluateRayReconstruction(gpu, game, userDlls, channel);
@@ -124,7 +132,7 @@ public sealed class CapabilityEngine : ICapabilityEngine
 
         ApplyPreset(profile, EnhancementProfilePreset.Balanced, game, gpu, userDlls);
         PopulateFriendlyStatuses(game, profile);
-        UpdateNeuralActivationDiagnostics(game, profile, gpu, userDlls, manifests);
+        UpdateNeuralActivationDiagnostics(game, profile, gpu, userDlls, manifests, _neuralHubProbeOptions);
 
         return profile;
     }
@@ -138,7 +146,7 @@ public sealed class CapabilityEngine : ICapabilityEngine
         CompatibilitySeedProfile? seedProfile,
         UpdateChannel channel)
     {
-        var nrEval = EvaluateNeuralRendering(gpu, game, userDlls, channel);
+        var nrEval = EvaluateNeuralRendering(gpu, game, userDlls, channel, _neuralHubProbeOptions);
         var srEval = EvaluateSuperResolution(gpu, game, userDlls, channel);
         var fgEval = EvaluateFrameGeneration(gpu, game, userDlls, channel);
         var rrEval = EvaluateRayReconstruction(gpu, game, userDlls, channel);
@@ -183,7 +191,7 @@ public sealed class CapabilityEngine : ICapabilityEngine
         }
 
         PopulateFriendlyStatuses(game, existing);
-        UpdateNeuralActivationDiagnostics(game, existing, gpu, userDlls, manifests);
+        UpdateNeuralActivationDiagnostics(game, existing, gpu, userDlls, manifests, _neuralHubProbeOptions);
         return existing;
     }
 
@@ -192,7 +200,8 @@ public sealed class CapabilityEngine : ICapabilityEngine
         GameEnhancementProfile profile,
         DetectedGpuInfo gpu,
         IReadOnlyCollection<UserImportedDllRecord> userDlls,
-        IReadOnlyCollection<BackendManifest> manifests)
+        IReadOnlyCollection<BackendManifest> manifests,
+        NeuralHubProbeOptions? neuralHubProbeOptions = null)
     {
         bool nrInstalledOnGame = game.InstalledFeatures.Contains(RenderingFeatureType.NeuralRendering)
                                  && game.HealthState == IntegrationHealthState.Healthy;
@@ -236,57 +245,40 @@ public sealed class CapabilityEngine : ICapabilityEngine
 
         var nrDll = userDlls.FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
         var nrManifest = manifests.FirstOrDefault(m => m.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase));
-        bool nrBackendReady = HasRuntimeBinaryPayload(nrManifest?.StagedInstallPath) || IsNeuralHubInstalledOnSystem();
+        NeuralHubStatusReport hubReport;
+        if (neuralHubProbeOptions == null && string.IsNullOrWhiteSpace(nrManifest?.StagedInstallPath))
+            hubReport = NeuralHubInspector.InspectHostQuickCached();
+        else
+            hubReport = NeuralHubInspector.InspectFullStatus(nrManifest?.StagedInstallPath, nrDll, null, neuralHubProbeOptions, includeGames: false);
+        bool nrBackendReady = NeuralHubInspector.HasRuntimeBinaryPayload(nrManifest?.StagedInstallPath) ||
+                              (hubReport.IsAppDetected && hubReport.IsRuntimeVerified);
 
-        bool modelCompatible = nrDll != null && (profile.SelectedNeuralModel == NeuralRenderingModelType.CC
-            ? nrDll.SupportsCcModel
-            : (nrDll.SupportsHtModel || HasVersionAtLeast(nrDll.FileVersion, new Version(310, 8, 0, 0))));
+        bool hasNrDll = nrDll != null || hubReport.IsDllImportedInNeuralHub;
+        string effectiveVersion = nrDll?.FileVersion ?? hubReport.NeuralHubDllVersion;
+        bool supportsCc = (nrDll?.SupportsCcModel == true) ||
+                          (hubReport.IsDllImportedInNeuralHub && HasVersionAtLeast(hubReport.NeuralHubDllVersion, new Version(310, 9, 16, 0)));
+        bool supportsHt = (nrDll?.SupportsHtModel == true) || HasVersionAtLeast(effectiveVersion, new Version(310, 8, 0, 0));
 
-        if (nrDll == null || !nrBackendReady || !modelCompatible)
+        bool modelCompatible = hasNrDll && (profile.SelectedNeuralModel == NeuralRenderingModelType.CC ? supportsCc : supportsHt);
+
+        if (!hasNrDll || !nrBackendReady || !modelCompatible)
         {
             profile.NeuralActivationState = NeuralRenderingActivationState.DependencyMissing;
             var missing = new List<string>();
             if (!nrBackendReady) missing.Add("DLSS-NR-on-AMD v0.9.0 / NeuralHub (user-acquired from official GitHub releases)");
-            if (nrDll == null) missing.Add($"user-owned nvngx_dlssnr.dll (>= {(profile.SelectedNeuralModel == NeuralRenderingModelType.CC ? "310.9.16.0" : "310.8.0.0")} for {profile.SelectedNeuralModel} model)");
-            else if (!modelCompatible) missing.Add($"nvngx_dlssnr.dll >= 310.9.16.0 for CC model (current v{nrDll.FileVersion} supports HT only)");
+            if (!hasNrDll) missing.Add($"user-owned nvngx_dlssnr.dll (>= {(profile.SelectedNeuralModel == NeuralRenderingModelType.CC ? "310.9.16.0" : "310.8.0.0")} for {profile.SelectedNeuralModel} model)");
+            else if (!modelCompatible) missing.Add($"nvngx_dlssnr.dll >= 310.9.16.0 for CC model (current v{effectiveVersion} supports HT only)");
             profile.NeuralActivationExplanation = "Missing required dependency: " + string.Join(" and ", missing) + ".";
             return;
         }
 
         profile.NeuralActivationState = NeuralRenderingActivationState.ReadyToConfigure;
-        profile.NeuralActivationExplanation = nrDll.SupportsCcModel
-            ? $"Ready (nvngx_dlssnr.dll v{nrDll.FileVersion} supports fast CC & HT models; Reference unavailable on RDNA 2)."
-            : $"Ready (nvngx_dlssnr.dll v{nrDll.FileVersion} supports HT model; >= 310.9.16.0 required for CC model).";
-    }
-
-    private static bool HasRuntimeBinaryPayload(string? dir)
-    {
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return false;
-        try
-        {
-            return Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories).Any()
-                   || Directory.EnumerateFiles(dir, "*.exe", SearchOption.AllDirectories)
-                       .Any(f => !Path.GetFileName(f).Contains("setup", StringComparison.OrdinalIgnoreCase));
-        }
-        catch { return false; }
-    }
-
-    private static bool IsNeuralHubInstalledOnSystem()
-    {
-        string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        foreach (string dir in new[]
-                 {
-                     Path.Combine(localApp, "Programs", "NeuralHub"),
-                     Path.Combine(localApp, "NeuralHub"),
-                     Path.Combine(appData, "NeuralHub"),
-                     Path.Combine(progFiles, "NeuralHub")
-                 })
-        {
-            if (HasRuntimeBinaryPayload(dir)) return true;
-        }
-        return false;
+        string sourceNote = nrDll != null && hubReport.IsVaultSynchronizedWithNeuralHub
+            ? " (NeuralHub & Vault synchronized)"
+            : (nrDll == null ? " (detected in NeuralHub store)" : string.Empty);
+        profile.NeuralActivationExplanation = supportsCc
+            ? $"Ready (nvngx_dlssnr.dll v{effectiveVersion} supports fast CC & HT models; Reference unavailable on RDNA 2){sourceNote}."
+            : $"Ready (nvngx_dlssnr.dll v{effectiveVersion} supports HT model; >= 310.9.16.0 required for CC model){sourceNote}.";
     }
 
     private static bool HasVersionAtLeast(string? raw, Version min)
@@ -479,7 +471,8 @@ public sealed class CapabilityEngine : ICapabilityEngine
         DetectedGpuInfo gpu,
         DiscoveredGame? game,
         IReadOnlyCollection<UserImportedDllRecord> userDlls,
-        UpdateChannel channel)
+        UpdateChannel channel,
+        NeuralHubProbeOptions? neuralHubProbeOptions = null)
     {
         var eval = new FeatureCapabilityEvaluation
         {
@@ -540,7 +533,8 @@ public sealed class CapabilityEngine : ICapabilityEngine
             return eval;
         }
 
-        bool hasNrDll = userDlls.Any(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+        var nrDllRecord = userDlls.FirstOrDefault(d => d.DllKind.Equals("nvngx_dlssnr", StringComparison.OrdinalIgnoreCase) && File.Exists(d.StoredPath));
+        bool hasNrDll = nrDllRecord != null || NeuralHubInspector.InspectHostQuickCached(neuralHubProbeOptions).IsDllImportedInNeuralHub;
         if (!hasNrDll)
             eval.MissingPrerequisites.Add("User-owned nvngx_dlssnr.dll (310.8.0.0+ for HT, 310.9.16+ for CC)");
 

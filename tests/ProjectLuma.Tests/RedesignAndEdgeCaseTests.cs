@@ -397,7 +397,7 @@ public sealed class RedesignAndEdgeCaseTests
             var installer = new TransactionalGameInstaller(new PeAnalyzer(), logger, Path.Combine(tempRoot, "backups"));
             string emptyDownloads = Path.Combine(tempRoot, "empty_downloads");
             Directory.CreateDirectory(emptyDownloads);
-            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orchestrator, installer, logger, emptyDownloads);
+            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orchestrator, installer, logger, emptyDownloads, NeuralHubProbeOptions.Disabled);
 
             var gpu = CreateRx6600Gpu();
             var game = new DiscoveredGame
@@ -414,7 +414,7 @@ public sealed class RedesignAndEdgeCaseTests
             };
 
             // 1. Requiring Neural Rendering without nvngx_dlssnr.dll flags missing user-owned component
-            var nrProfile = new CapabilityEngine().EvaluateGame(game, gpu, Array.Empty<UserImportedDllRecord>(), manifests, null, UpdateChannel.Stable);
+            var nrProfile = new CapabilityEngine(NeuralHubProbeOptions.Disabled).EvaluateGame(game, gpu, Array.Empty<UserImportedDllRecord>(), manifests, null, UpdateChannel.Stable);
             nrProfile.EnableNeuralRendering = true;
             var plan = await resolver.AnalyzeRequirementsAsync(game, nrProfile, gpu);
             Assert.True(plan.RequiresUserAttention);
@@ -583,7 +583,7 @@ public sealed class RedesignAndEdgeCaseTests
                 SupportsCcModel = false
             };
 
-            var engine = new CapabilityEngine();
+            var engine = new CapabilityEngine(NeuralHubProbeOptions.Disabled);
             var profileMissingHip = engine.EvaluateGame(game, gpu, new[] { htOnlyDll }, Array.Empty<BackendManifest>(), null, UpdateChannel.Stable);
 
             Assert.Equal(CapabilityState.RequiresDependency, profileMissingHip.NeuralRenderingState);
@@ -1105,19 +1105,22 @@ public sealed class RedesignAndEdgeCaseTests
             var logger = new LumaLogger(Path.Combine(tempRoot, "logs"));
             var repo = new SqliteCompatibilityRepository(logger, Path.Combine(tempRoot, "luma.db"));
             await repo.InitializeAsync();
-            var pkgMgr = new GitHubPackageManager(repo, logger, stagingRootDirectory: Path.Combine(tempRoot, "backends"));
+            var pkgMgr = new GitHubPackageManager(repo, logger, stagingRootDirectory: Path.Combine(tempRoot, "backends"), neuralHubProbeOptions: NeuralHubProbeOptions.Disabled);
             var dllVault = new UserDllVault(repo, logger, Path.Combine(tempRoot, "vault"));
             var orchestrator = new BackendOrchestrator();
             var pe = new PeAnalyzer();
             var installer = new TransactionalGameInstaller(pe, logger, Path.Combine(tempRoot, "backups"));
-            var resolver = new IntelligentComponentResolver(pkgMgr, dllVault, repo, orchestrator, installer, logger);
+            var emptyDl = Path.Combine(tempRoot, "empty_dl");
+            Directory.CreateDirectory(emptyDl);
+            var resolver = new IntelligentComponentResolver(pkgMgr, dllVault, repo, orchestrator, installer, logger, emptyDl, NeuralHubProbeOptions.Disabled);
             var scanner = new MultiStoreGameScanner(logger, pe);
             var artwork = new ArtworkDiscoveryService(logger, cacheDirectory: Path.Combine(tempRoot, "art"), credFilePath: Path.Combine(tempRoot, "sgdb.dat"));
             var launcher = new GameLaunchService(installer, logger);
             var gpuDetector = new StubGpuDetector(CreateRx6600Gpu());
             var updater = new UpdateCoordinatorService(gpuDetector, repo, pkgMgr, orchestrator, installer, logger);
+            updater.ConfigureNeuralHubProbe(NeuralHubProbeOptions.Disabled);
             using var vm = new MainViewModel(
-                gpuDetector, new CapabilityEngine(), repo, scanner, artwork,
+                gpuDetector, new CapabilityEngine(NeuralHubProbeOptions.Disabled), repo, scanner, artwork,
                 pkgMgr, dllVault, orchestrator, resolver, installer, launcher,
                 updater, logger, new StubDialogService());
 
@@ -1192,12 +1195,13 @@ public sealed class RedesignAndEdgeCaseTests
 
             var handler = new ControlledOptiScalerHttpHandler(Array.Empty<byte>());
             using var http = new HttpClient(handler);
-            var pkgMgr = new GitHubPackageManager(repo, logger, http, Path.Combine(tempRoot, "backends"));
+            var pkgMgr = new GitHubPackageManager(repo, logger, http, Path.Combine(tempRoot, "backends"), neuralHubProbeOptions: NeuralHubProbeOptions.Disabled);
             var gpuDetector = new StubGpuDetector(CreateRx6600Gpu());
             var orchestrator = new BackendOrchestrator();
             var installer = new TransactionalGameInstaller(new PeAnalyzer(), logger, Path.Combine(tempRoot, "backups"));
 
             var coordinator = new UpdateCoordinatorService(gpuDetector, repo, pkgMgr, orchestrator, installer, logger);
+            coordinator.ConfigureNeuralHubProbe(NeuralHubProbeOptions.Disabled);
             await coordinator.CheckNowAsync();
 
             var appItem = coordinator.Status.Items.First(i => i.ComponentId == "project-luma-app");
@@ -1360,7 +1364,7 @@ public sealed class RedesignAndEdgeCaseTests
                 new() { Id = "optiscaler", PinnedStableVersion = "v0.9.5" },
                 new() { Id = "dlss-nr-on-amd", PinnedStableVersion = "v0.9.0", StagedInstallPath = nrStageDir }
             };
-            var engine = new CapabilityEngine();
+            var engine = new CapabilityEngine(NeuralHubProbeOptions.Disabled);
             var baseGame = new DiscoveredGame
             {
                 Id = "nr-test",

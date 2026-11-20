@@ -206,6 +206,80 @@ public sealed class NeuralHubDetectionResultInfo
     public string Summary { get; set; } = string.Empty;
 }
 
+/// <summary>Per-game NeuralHub integration, stub loader, configuration, and OptiScaler conflict snapshot.</summary>
+public sealed class NeuralHubGameIntegrationStatus
+{
+    public string GameId { get; set; } = string.Empty;
+    public string GameName { get; set; } = string.Empty;
+    public string GameDirectory { get; set; } = string.Empty;
+    public string ExecutableName { get; set; } = string.Empty;
+    public string RegistryKey { get; set; } = string.Empty;
+    public string ExpectedProxyDll { get; set; } = string.Empty;
+    public string ProxyDllPath { get; set; } = string.Empty;
+    public long ProxyDllSizeBytes { get; set; }
+    public bool IsRegisteredInNeuralHub { get; set; }
+    public bool IsGameLoaderInstalled { get; set; }
+    public bool HasOptiScalerProxyConflict { get; set; }
+    public bool IsGameConfigured { get; set; }
+    public bool HasRuntimeLogInitialized { get; set; }
+    public string RuntimeLogPath { get; set; } = string.Empty;
+    public string ConfigIniPath { get; set; } = string.Empty;
+    public string StatusSummary { get; set; } = string.Empty;
+    public string ConflictDetail { get; set; } = string.Empty;
+}
+
+/// <summary>Complete read-only diagnostic state across NeuralHub app, runtime, DLL store, Vault sync, and games.</summary>
+public sealed class NeuralHubStatusReport
+{
+    public bool IsAppDetected { get; set; }
+    public string DetectionSource { get; set; } = string.Empty;
+    public string StorePath { get; set; } = string.Empty;
+    public string ExecutablePath { get; set; } = string.Empty;
+    public string AppVersion { get; set; } = string.Empty;
+
+    public bool IsRuntimeVerified { get; set; }
+    public string RuntimePath { get; set; } = string.Empty;
+    public string RuntimeVersion { get; set; } = string.Empty;
+    public string RuntimeAbi { get; set; } = string.Empty;
+    public bool HasPayloadMarker { get; set; }
+    public bool HasHostDll { get; set; }
+    public bool HasBundledFsrUpscaler { get; set; }
+    public bool HasBundledFsrFrameGen { get; set; }
+
+    public bool IsDllImportedInNeuralHub { get; set; }
+    public string NeuralHubDllFileName { get; set; } = string.Empty;
+    public string NeuralHubDllFullPath { get; set; } = string.Empty;
+    public string NeuralHubDllVersion { get; set; } = string.Empty;
+    public string NeuralHubDllSha256 { get; set; } = string.Empty;
+    public string NeuralHubSupportedModels { get; set; } = string.Empty;
+
+    public bool IsDllImportedInLumaVault { get; set; }
+    public string LumaVaultDllPath { get; set; } = string.Empty;
+    public string LumaVaultDllVersion { get; set; } = string.Empty;
+    public string LumaVaultDllSha256 { get; set; } = string.Empty;
+    public bool IsVaultSynchronizedWithNeuralHub { get; set; }
+
+    public string StatusHeadline { get; set; } = "NeuralHub not detected";
+    public string DllSyncSummary { get; set; } = string.Empty;
+    public string DiagnosticsSummary { get; set; } = string.Empty;
+    public List<NeuralHubGameIntegrationStatus> RegisteredGames { get; set; } = new();
+}
+
+/// <summary>Optional overrides allowing tests to isolate or mock NeuralHub host discovery deterministically.</summary>
+public sealed class NeuralHubProbeOptions
+{
+    public static NeuralHubProbeOptions Disabled { get; } = new() { DisableHostProbe = true };
+
+    public bool DisableHostProbe { get; set; }
+    public bool IncludeRegistry { get; set; } = true;
+    public bool IncludeRunningProcesses { get; set; } = true;
+    public string? ExplicitRegistryStorePath { get; set; }
+    public string? ExplicitRegistryRuntimePath { get; set; }
+    public string? ExplicitRegistryRuntimeVersion { get; set; }
+    public string? ExplicitRegistryRuntimeAbi { get; set; }
+    public List<string> CandidateDirectories { get; set; } = new();
+}
+
 /// <summary>A single file deployment operation in a transactional backend installation plan.</summary>
 public sealed class BackendFileDeployItem
 {

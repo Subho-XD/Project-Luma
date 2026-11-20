@@ -81,6 +81,7 @@ public partial class App : Application
                 generatedUtc = DateTime.UtcNow,
                 hardwareProfile = vm.HardwareProfile,
                 detectedGpu = vm.GpuInfo,
+                neuralHub = vm.LastNeuralHubReport,
                 discoveredGames = vm.AllGames.Select(g => new
                 {
                     g.Title,
@@ -376,6 +377,9 @@ public partial class App : Application
         {
             nrItem.IsDetailsExpanded = true;
             await CaptureFrameAsync("EnhancementLibrary_NeuralDllImport_1080p_100pct.png", 1920, 1080, 1.0);
+            vm.IsNeuralDiagnosticsExpanded = true;
+            await CaptureFrameAsync("EnhancementLibrary_NeuralHubDiagnostics_1080p_100pct.png", 1920, 1080, 1.0);
+            vm.IsNeuralDiagnosticsExpanded = false;
             nrItem.IsDetailsExpanded = false;
         }
         vm.SelectedEnhancementCategory = prevCategory;
@@ -390,16 +394,20 @@ public partial class App : Application
         vm.SelectedGame = prevGame;
         await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
-        // AI Visuals 7-Stage Discovery Setup Drawer capture (v3.3.0)
+        // AI Visuals 7-Stage Discovery Setup Drawer capture (live NeuralHub state)
         vm.IsAiVisualsSetupDrawer = true;
         vm.SetupDrawerHeader = "SETTING UP AI VISUAL ENHANCEMENT";
         vm.SetupSteps.Clear();
         vm.SetupSteps.Add(new SetupProgressStep { Label = "Checking GPU compatibility", Detail = "AMD Radeon RX 6600 (gfx1032) checked", State = SetupStepState.Complete });
         vm.SetupSteps.Add(new SetupProgressStep { Label = "Checking game compatibility", Detail = $"{vm.SelectedGame?.Title ?? "Game"} (DirectX 12, 64-bit) compatible", State = SetupStepState.Complete });
-        vm.SetupSteps.Add(new SetupProgressStep { Label = "Checking Neural Rendering backend", Detail = "Install NeuralHub v0.9.0 from official GitHub release", State = SetupStepState.AttentionRequired });
+        vm.SetupSteps.Add(vm.IsNeuralHubDetected
+            ? new SetupProgressStep { Label = "Checking Neural Rendering backend", Detail = vm.LastNeuralHubReport.StatusHeadline, State = SetupStepState.Complete }
+            : new SetupProgressStep { Label = "Checking Neural Rendering backend", Detail = "Install NeuralHub v0.9.0 from official GitHub release", State = SetupStepState.AttentionRequired });
         vm.SetupSteps.Add(new SetupProgressStep { Label = "Scanning game folders", Detail = "Checked registered game directories (depth <= 3)", State = SetupStepState.Complete });
-        vm.SetupSteps.Add(new SetupProgressStep { Label = "Scanning Downloads", Detail = "No valid local nvngx_dlssnr.dll found yet", State = SetupStepState.Complete });
-        vm.SetupSteps.Add(new SetupProgressStep { Label = "Validating model DLL", Detail = "Requires user-owned nvngx_dlssnr.dll (>= 310.9.16.0 for CC)", State = SetupStepState.AttentionRequired });
+        vm.SetupSteps.Add(new SetupProgressStep { Label = "Scanning Downloads", Detail = "Downloads watched automatically for local components", State = SetupStepState.Complete });
+        vm.SetupSteps.Add(vm.LastNeuralHubReport.IsDllImportedInNeuralHub || vm.HasImportedNeuralDll
+            ? new SetupProgressStep { Label = "Validating model DLL", Detail = vm.NeuralLocalInstallationStatusText, State = SetupStepState.Complete }
+            : new SetupProgressStep { Label = "Validating model DLL", Detail = "Requires user-owned nvngx_dlssnr.dll (>= 310.9.16.0 for CC)", State = SetupStepState.AttentionRequired });
         vm.SetupSteps.Add(new SetupProgressStep { Label = "Checking runtime initialization", Detail = "amdhip64_6.dll initialized; amdhip64_7.dll absent on RX 6600", State = SetupStepState.AttentionRequired });
         vm.IsSetupDrawerOpen = true;
         await CaptureFrameAsync("GameDetails_AiVisualsSetupDrawer_1080p_100pct.png", 1920, 1080, 1.0);

@@ -242,16 +242,18 @@ public sealed class RepairAndReleaseReadinessTests
             var logger = new LumaLogger(Path.Combine(tempRoot, "logs"));
             var repo = new SqliteCompatibilityRepository(logger, Path.Combine(tempRoot, "luma.db"));
             await repo.InitializeAsync();
-            var pkgMgr = new GitHubPackageManager(repo, logger, stagingRootDirectory: Path.Combine(tempRoot, "backends"));
+            var pkgMgr = new GitHubPackageManager(repo, logger, stagingRootDirectory: Path.Combine(tempRoot, "backends"), neuralHubProbeOptions: NeuralHubProbeOptions.Disabled);
             var vault = new UserDllVault(repo, logger, Path.Combine(tempRoot, "vault"));
             var orch = new BackendOrchestrator();
             var installer = new TransactionalGameInstaller(new PeAnalyzer(), logger, Path.Combine(tempRoot, "backups"));
-            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orch, installer, logger);
+            var emptyDl = Path.Combine(tempRoot, "empty_downloads");
+            Directory.CreateDirectory(emptyDl);
+            var resolver = new IntelligentComponentResolver(pkgMgr, vault, repo, orch, installer, logger, emptyDl, NeuralHubProbeOptions.Disabled);
 
             string gameDir = Path.Combine(tempRoot, "GameA");
             var game = CreateSampleDx12Game(gameDir);
             var gpu = CreateRx6600(hip72Available: false);
-            var engine = new CapabilityEngine();
+            var engine = new CapabilityEngine(NeuralHubProbeOptions.Disabled);
             var profile = engine.EvaluateGame(game, gpu, Array.Empty<UserImportedDllRecord>(), await pkgMgr.GetManifestsAsync(), null, UpdateChannel.Stable);
             profile.EnableNeuralRendering = true;
 

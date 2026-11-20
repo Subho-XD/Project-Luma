@@ -173,7 +173,17 @@ public sealed class BackendComponentItem : ObservableObject
             CanDownload = false;
             IsDriverManaged = false;
             IsHardwareIncompatible = false;
-            if (IsInstalled)
+
+            if (IsNeuralRenderingComponent && _neuralHubReport?.IsAppDetected == true && _neuralHubReport.IsRuntimeVerified)
+            {
+                bool hasAnyDll = _neuralHubReport.IsDllImportedInNeuralHub || _neuralHubReport.IsDllImportedInLumaVault;
+                InstallState = hasAnyDll ? ComponentInstallState.Installed : ComponentInstallState.RequiresSetup;
+                InstallStateLabel = hasAnyDll ? "Installed & Detected" : "DLL Required";
+                StatusDetailText = hasAnyDll
+                    ? $"{_neuralHubReport.StatusHeadline} · {_neuralHubReport.DllSyncSummary}"
+                    : $"{_neuralHubReport.StatusHeadline} · Import nvngx_dlssnr.dll to complete setup.";
+            }
+            else if (IsInstalled)
             {
                 InstallState = Manifest.ReleaseChannel.Equals("experimental", StringComparison.OrdinalIgnoreCase) && gpu.Architecture == GpuArchitecture.RDNA2
                     ? ComponentInstallState.Experimental
@@ -226,7 +236,26 @@ public sealed class BackendComponentItem : ObservableObject
         OnPropertyChanged(nameof(ActionButtonLabel));
         OnPropertyChanged(nameof(CanRepairOrVerify));
         OnPropertyChanged(nameof(CanRemove));
+        OnPropertyChanged(nameof(IsExternalNeuralHubInstalled));
+        OnPropertyChanged(nameof(ShowExternalAcquireButtons));
+        OnPropertyChanged(nameof(ShowInternalVerifyRepair));
+        OnPropertyChanged(nameof(ShowInternalRemove));
+        OnPropertyChanged(nameof(NeuralHubHeadline));
+        OnPropertyChanged(nameof(NeuralHubDllSyncSummary));
+        OnPropertyChanged(nameof(NeuralHubDiagnosticsText));
     }
+
+    private NeuralHubStatusReport? _neuralHubReport;
+
+    public bool IsExternalNeuralHubInstalled =>
+        IsNeuralRenderingComponent && _neuralHubReport?.IsAppDetected == true && _neuralHubReport.IsRuntimeVerified;
+
+    public bool ShowExternalAcquireButtons => IsExternalAcquisition && !IsExternalNeuralHubInstalled;
+    public bool ShowInternalVerifyRepair => CanRepairOrVerify && !IsExternalNeuralHubInstalled;
+    public bool ShowInternalRemove => CanRemove && !IsExternalNeuralHubInstalled;
+    public string NeuralHubHeadline => _neuralHubReport?.StatusHeadline ?? string.Empty;
+    public string NeuralHubDllSyncSummary => _neuralHubReport?.DllSyncSummary ?? string.Empty;
+    public string NeuralHubDiagnosticsText => _neuralHubReport?.DiagnosticsSummary ?? string.Empty;
 
     public CancellationToken BeginOperation()
     {
@@ -295,14 +324,33 @@ public sealed class BackendComponentItem : ObservableObject
         OnPropertyChanged(nameof(CanRemove));
     }
 
-    public async Task RefreshStateFromManifestAsync(DetectedGpuInfo gpu, BackendManifest? parentManifest = null)
+    public async Task RefreshStateFromManifestAsync(
+        DetectedGpuInfo gpu,
+        BackendManifest? parentManifest = null,
+        NeuralHubStatusReport? neuralHubReport = null)
     {
+        if (IsNeuralRenderingComponent && neuralHubReport != null)
+        {
+            _neuralHubReport = neuralHubReport;
+            if (neuralHubReport.IsAppDetected && neuralHubReport.IsRuntimeVerified)
+            {
+                Manifest.StagedInstallPath = !string.IsNullOrWhiteSpace(neuralHubReport.RuntimePath)
+                    ? neuralHubReport.RuntimePath
+                    : neuralHubReport.StorePath;
+                Manifest.CurrentInstalledVersion = !string.IsNullOrWhiteSpace(neuralHubReport.RuntimeVersion)
+                    ? neuralHubReport.RuntimeVersion
+                    : "v0.9.0";
+                _effectiveStagedPath = Manifest.StagedInstallPath;
+                _effectiveInstalledVersion = Manifest.CurrentInstalledVersion;
+            }
+        }
+
         bool bundled = Manifest.PreferredInstallMethod.Equals("BundledWithParent", StringComparison.OrdinalIgnoreCase) && parentManifest != null;
         string targetId = bundled && parentManifest != null ? parentManifest.Id : Manifest.Id;
         string targetPath = bundled && parentManifest != null ? parentManifest.StagedInstallPath : Manifest.StagedInstallPath;
         string targetVer = bundled && parentManifest != null ? parentManifest.CurrentInstalledVersion : Manifest.CurrentInstalledVersion;
 
-        bool installed = await Task.Run(() => ComputeIsInstalledOnDisk(targetId, targetPath, targetVer));
+        bool installed = IsExternalNeuralHubInstalled || await Task.Run(() => ComputeIsInstalledOnDisk(targetId, targetPath, targetVer));
         _isInstalledOnDisk = installed;
         RefreshStateFromManifest(gpu, parentManifest);
     }

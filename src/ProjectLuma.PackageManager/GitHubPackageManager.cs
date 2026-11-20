@@ -29,6 +29,7 @@ public sealed class GitHubPackageManager : IPackageManager
     private readonly ILumaLogger _logger;
     private readonly HttpClient _http;
     private readonly string _manifestSeedPath;
+    private NeuralHubProbeOptions? _neuralHubProbeOptions;
     private readonly Dictionary<string, (string ETag, BackendReleaseInfo Cached)> _etagCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _operationLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _globalDownloadConcurrency = new(2, 2);
@@ -53,17 +54,21 @@ public sealed class GitHubPackageManager : IPackageManager
         ILumaLogger logger,
         HttpClient? httpClient = null,
         string? stagingRootDirectory = null,
-        string? manifestSeedPath = null)
+        string? manifestSeedPath = null,
+        NeuralHubProbeOptions? neuralHubProbeOptions = null)
     {
         _repo = repo;
         _logger = logger;
         _http = httpClient ?? CreateSafeHttpClient();
+        _neuralHubProbeOptions = neuralHubProbeOptions;
         StagingRootDirectory = string.IsNullOrWhiteSpace(stagingRootDirectory)
             ? LumaPaths.GetSubdirectory("backends")
             : stagingRootDirectory;
         Directory.CreateDirectory(StagingRootDirectory);
         _manifestSeedPath = ResolveManifestPath(manifestSeedPath);
     }
+
+    public void ConfigureNeuralHubProbe(NeuralHubProbeOptions? options) => _neuralHubProbeOptions = options;
 
     private static HttpClient CreateSafeHttpClient()
     {
@@ -74,7 +79,7 @@ public sealed class GitHubPackageManager : IPackageManager
         };
         // Large archive streams (70+ MB) must never time out at 30 seconds; per-read stall timeout handles unresponsive sockets cleanly.
         var client = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(15) };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ProjectLuma", "3.3.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ProjectLuma", "3.3.1"));
         return client;
     }
 
@@ -100,6 +105,10 @@ public sealed class GitHubPackageManager : IPackageManager
 
                     VerifyOrRepairDiskStageState(item);
                 }
+                else if (item.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase))
+                {
+                    VerifyOrRepairDiskStageState(item);
+                }
                 list.Add(item);
             }
             return list;
@@ -113,6 +122,21 @@ public sealed class GitHubPackageManager : IPackageManager
     {
         if (HasUsableStagedFiles(item.Id, item.StagedInstallPath))
             return;
+
+        if (item.Id.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase))
+        {
+            var hubReport = NeuralHubDetector.InspectFullStatus(item.StagedInstallPath, options: _neuralHubProbeOptions);
+            if (hubReport.IsAppDetected && hubReport.IsRuntimeVerified)
+            {
+                item.StagedInstallPath = !string.IsNullOrWhiteSpace(hubReport.RuntimePath)
+                    ? hubReport.RuntimePath
+                    : hubReport.StorePath;
+                item.CurrentInstalledVersion = !string.IsNullOrWhiteSpace(hubReport.RuntimeVersion)
+                    ? hubReport.RuntimeVersion
+                    : "v0.9.0";
+                return;
+            }
+        }
 
         // Recover valid staged subfolder inside internal vault if persisted path became stale
         string backendVault = Path.Combine(StagingRootDirectory, item.Id);
@@ -620,7 +644,17 @@ public sealed class GitHubPackageManager : IPackageManager
     {
         var manifests = await GetManifestsAsync(ct);
         var manifest = manifests.FirstOrDefault(m => m.Id.Equals(backendId, StringComparison.OrdinalIgnoreCase));
-        if (manifest == null || string.IsNullOrWhiteSpace(manifest.StagedInstallPath) || !Directory.Exists(manifest.StagedInstallPath))
+        if (manifest == null)
+            return false;
+
+        if (backendId.Equals("dlss-nr-on-amd", StringComparison.OrdinalIgnoreCase))
+        {
+            var hubReport = NeuralHubDetector.InspectFullStatus(manifest.StagedInstallPath, options: _neuralHubProbeOptions);
+            if (hubReport.IsAppDetected && hubReport.IsRuntimeVerified)
+                return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(manifest.StagedInstallPath) || !Directory.Exists(manifest.StagedInstallPath))
             return false;
 
         return await Task.Run(async () =>
@@ -653,7 +687,15 @@ public sealed class GitHubPackageManager : IPackageManager
         if (manifest == null) return;
 
         if (!string.IsNullOrWhiteSpace(manifest.StagedInstallPath) && Directory.Exists(manifest.StagedInstallPath))
-            Directory.Delete(manifest.StagedInstallPath, true);
+        {
+            // Never delete externally managed user directories (such as %LOCALAPPDATA%\Danielblnc\NeuralHub)
+            string fullStagingRoot = Path.GetFullPath(StagingRootDirectory).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            string fullCurrent = Path.GetFullPath(manifest.StagedInstallPath);
+            if (fullCurrent.StartsWith(fullStagingRoot, StringComparison.OrdinalIgnoreCase))
+                Directory.Delete(manifest.StagedInstallPath, true);
+            else
+                _logger.Warn("PackageManager", $"Skipped deleting external directory '{manifest.StagedInstallPath}' during RemoveBackendAsync({backendId}).");
+        }
 
         manifest.CurrentInstalledVersion = "Not Installed";
         manifest.StagedInstallPath = string.Empty;
