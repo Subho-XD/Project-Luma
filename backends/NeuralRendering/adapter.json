@@ -1,0 +1,17 @@
+{
+  "backendId": "dlss-nr-on-amd",
+  "feature": "NeuralRendering",
+  "displayName": "DLSS-NR-on-AMD (NeuralHub Supermod)",
+  "upstreamRepository": "danielblnc/DLSS-NR-on-AMD",
+  "supportedArchitectures": ["RDNA2", "RDNA3", "RDNA4"],
+  "rdna2Constraints": {
+    "requiresHipSdk72": true,
+    "hipDllName": "amdhip64_7.dll",
+    "availableQualityModes": ["Fast", "Superfast"],
+    "disabledQualityModes": ["Reference"],
+    "experimentalNotice": "RDNA 2 (RX 6000) Neural Rendering uses the experimental HIP runtime path. Reference mode is unavailable on RX 6000; DLSS Frame Generation is unsupported on RX 6000."
+  },
+  "requiredUserDlls": ["nvngx_dlssnr.dll"],
+  "defaultOverlayKey": "End",
+  "configFileName": "dlssnr_on_amd.ini"
+}

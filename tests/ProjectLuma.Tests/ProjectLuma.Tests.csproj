@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ProjectLuma.Core\ProjectLuma.Core.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.Logging\ProjectLuma.Logging.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.GpuDetection\ProjectLuma.GpuDetection.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.Compatibility\ProjectLuma.Compatibility.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.GameDiscovery\ProjectLuma.GameDiscovery.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.PackageManager\ProjectLuma.PackageManager.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.BackendManager\ProjectLuma.BackendManager.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.GameInstaller\ProjectLuma.GameInstaller.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.UpdateService\ProjectLuma.UpdateService.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.UI\ProjectLuma.UI.csproj" />
+    <ProjectReference Include="..\..\src\ProjectLuma.Setup\ProjectLuma.Setup.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Net.Http" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\data\**\*">
+      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\backends\**\*">
+      <Link>backends\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

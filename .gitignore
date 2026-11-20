@@ -1,0 +1,25 @@
+# Build & IDE outputs
+bin/
+obj/
+dist/
+backups/
+TestResults/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Runtime / local test artifacts
+*.log
+*.db
+*.db-wal
+*.db-shm
+UserComponents/
+artwork_cache/
+
+# Release executables/archives belong on GitHub Releases as binary assets (>100 MB),
+# while release metadata, checksums, release notes, and notices remain tracked in Git.
+release/**/*.exe
+release/**/*.zip
+release/**/*.7z

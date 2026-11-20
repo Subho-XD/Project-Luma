@@ -1,0 +1,10 @@
+{
+  "backendId": "dlss-rr-on-amd",
+  "feature": "RayReconstruction",
+  "displayName": "Ray Reconstruction (DLSS-RR Model F / RT Denoising)",
+  "supportedArchitectures": ["RDNA3", "RDNA4"],
+  "experimentalArchitectures": [],
+  "unsupportedArchitectures": ["GCN", "RDNA1", "RDNA2"],
+  "rdna2Reason": "DLSS Ray Reconstruction (Model F) is supported on RDNA 3 and RDNA 4 architectures. On RX 6600 (RDNA 2), Ray Reconstruction is unsupported on the stable baseline and should remain disabled while Super Resolution and Neural Rendering operate independently.",
+  "requiredUserDlls": ["nvngx_dlssd.dll"]
+}

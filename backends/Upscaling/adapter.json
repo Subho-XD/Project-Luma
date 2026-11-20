@@ -1,0 +1,17 @@
+{
+  "backendId": "optiscaler",
+  "feature": "SuperResolution",
+  "displayName": "OptiScaler Super Resolution (FFX 2.4 / XeSS 3.0.2)",
+  "upstreamRepository": "OptiScaler/OptiScaler",
+  "supportedArchitectures": ["GCN", "RDNA1", "RDNA2", "RDNA3", "RDNA4", "FutureRDNA"],
+  "supportedApis": ["DirectX12", "DirectX11", "Vulkan"],
+  "availableOutputsByArchitecture": {
+    "RDNA2": ["FSR 4.1.2 INT8 (FSR4-i8-2)", "FSR 3.1.2", "FSR 2.2.1", "XeSS 2.0.2"],
+    "RDNA3": ["FSR 4.1.2 INT8 (FSR4-i8)", "FSR 3.1.2", "XeSS 2.0.2", "DLSS-SR (via DLSS-NR-on-AMD)"],
+    "RDNA4": ["FSR 4.1.2 FP8 (FSR4-Upscale)", "FSR 3.1.2", "XeSS 2.0.2", "DLSS-SR (via DLSS-NR-on-AMD)"],
+    "RDNA1": ["FSR 3.1.2", "FSR 2.2.1", "XeSS 2.0.2"]
+  },
+  "presets": ["UltraQuality", "Quality", "Balanced", "Performance", "UltraPerformance", "NativeAA"],
+  "defaultOverlayKey": "Insert",
+  "configFileName": "OptiScaler.ini"
+}

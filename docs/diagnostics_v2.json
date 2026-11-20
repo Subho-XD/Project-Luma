@@ -1,0 +1,72 @@
+{
+  "generatedUtc": "2026-11-19T17:56:20.5560484Z",
+  "hardwareProfile": {
+    "gpu": "AMD Radeon RX 6600",
+    "pci_id": "VEN_1002\u0026DEV_73FF",
+    "architecture": "RDNA2",
+    "vram": "7.96 GB",
+    "driver_version": "32.0.21045.29003",
+    "hip_runtime": "amdhip64_6.dll (10.0.3652.0) - HIP 7.2 missing",
+    "capabilities": {
+      "neural_rendering": "requires_dependency",
+      "super_resolution": "supported",
+      "frame_generation": "supported",
+      "ray_reconstruction": "unsupported",
+      "amd_frame_generation": "driver_dependent"
+    }
+  },
+  "detectedGpu": {
+    "Manufacturer": "AMD",
+    "ModelName": "AMD Radeon RX 6600",
+    "VendorId": 4098,
+    "DeviceId": 29695,
+    "SubsystemId": 97849411,
+    "RevisionId": 199,
+    "PciIdentifier": "VEN_1002\u0026DEV_73FF",
+    "Architecture": 3,
+    "Codename": "Navi 23",
+    "IsIntegrated": false,
+    "VramBytes": 8541929472,
+    "VramGigabytes": 7.96,
+    "VramFormatted": "7.96 GB",
+    "DriverVersion": "32.0.21045.29003",
+    "AdrenalinVersionDisplay": "26.11.2",
+    "MeetsAdrenalin2611Minimum": true,
+    "DirectX12Supported": true,
+    "DirectXFeatureLevel": "12_2 (Ultimate)",
+    "VulkanSupported": true,
+    "HipRuntimeInstalled": true,
+    "HipRuntimeDllName": "amdhip64_6.dll",
+    "HipRuntimeVersion": "10.0.3652.0",
+    "HipRuntimePath": "C:\\WINDOWS\\system32\\amdhip64_6.dll",
+    "Hip72SdkAvailable": false,
+    "CpuName": "AMD Ryzen 5 5500",
+    "CpuCores": 6,
+    "CpuLogicalProcessors": 12,
+    "Avx2Supported": true,
+    "OsCaption": "Microsoft Windows 11 Pro",
+    "OsVersion": "10.0.26300",
+    "OsBuildNumber": 26300,
+    "IsWindows11": true,
+    "DetectedAtUtc": "2026-11-19T17:56:19.8777374Z"
+  },
+  "discoveredGames": [
+    {
+      "Title": "Aniimo",
+      "LauncherBadge": "Steam",
+      "ApiBadge": "DirectX 12",
+      "EngineName": "Unity",
+      "ExecutableName": "Aniimo.exe",
+      "FriendlyStatusText": "Ready to Enhance",
+      "ArtworkSource": "SteamLocalCache",
+      "HasCoverImage": true,
+      "HasHeroImage": true,
+      "HasLogoImage": true,
+      "NeuralState": 3,
+      "SuperResState": 0,
+      "FrameGenState": 0,
+      "RayReconState": 6,
+      "AntiCheatStatus": 0
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "backendId": "optiscaler-fg",
+  "feature": "FrameGeneration",
+  "displayName": "Frame Generation Pipeline (FSR-FG / OptiFG / dlssg-to-fsr3 / Guided AFMF 2)",
+  "supportedArchitectures": ["RDNA1", "RDNA2", "RDNA3", "RDNA4", "FutureRDNA"],
+  "engines": [
+    { "id": "fsr-fg-4", "name": "AMD FSR Frame Generation 4.0.2", "rdna2Status": "Supported", "requiresApi": "DirectX12" },
+    { "id": "optifg", "name": "OptiScaler OptiFG (DX12 + HUDfix)", "rdna2Status": "Supported", "requiresApi": "DirectX12" },
+    { "id": "nukem-dlssg-to-fsr3", "name": "Nukem dlssg-to-fsr3 0.130", "rdna2Status": "SupportedWithLimitations", "requiresApi": "DirectX12" },
+    { "id": "afmf-2-guided", "name": "AMD Fluid Motion Frames 2 (Guided Adrenalin)", "rdna2Status": "SupportedWithLimitations", "requiresApi": "Any" },
+    { "id": "dlss-fg-amd", "name": "DLSS Frame Generation (DLSS-NR-on-AMD)", "rdna2Status": "Unsupported", "requiresApi": "DirectX12" }
+  ],
+  "doubleFgGuardEnabled": true
+}

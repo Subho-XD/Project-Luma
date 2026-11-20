@@ -1,0 +1,16 @@
+<UserControl x:Class="ProjectLuma.UI.Controls.CapabilityBadge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Border CornerRadius="{StaticResource RadiusBadge}"
+            Padding="{StaticResource BadgePadding}"
+            BorderThickness="1"
+            Background="{Binding State, ElementName=Root, Converter={StaticResource CapabilityStateBrushConverter}, ConverterParameter=bg}"
+            BorderBrush="{Binding State, ElementName=Root, Converter={StaticResource CapabilityStateBrushConverter}}">
+        <TextBlock FontFamily="{StaticResource FontUi}"
+                   FontSize="11.5"
+                   FontWeight="SemiBold"
+                   Foreground="{Binding State, ElementName=Root, Converter={StaticResource CapabilityStateBrushConverter}}"
+                   Text="{Binding Label, ElementName=Root}" />
+    </Border>
+</UserControl>

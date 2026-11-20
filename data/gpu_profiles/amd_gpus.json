@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "updatedUtc": "2026-11-19T16:30:00Z",
+  "vendors": {
+    "1002": "AMD"
+  },
+  "amdDeviceCatalog": [
+    { "deviceId": "7550", "architecture": "RDNA4", "codename": "Navi 48", "familyName": "Radeon RX 9070 Series", "computeTier": "FP8+INT8", "defaultVramGb": 16, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": true },
+    { "deviceId": "7551", "architecture": "RDNA4", "codename": "Navi 48", "familyName": "Radeon RX 9070", "computeTier": "FP8+INT8", "defaultVramGb": 16, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": true },
+    { "deviceId": "7590", "architecture": "RDNA4", "codename": "Navi 44", "familyName": "Radeon RX 9060 XT / 9060", "computeTier": "FP8+INT8", "defaultVramGb": 16, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": true },
+    { "deviceId": "744C", "architecture": "RDNA3", "codename": "Navi 31", "familyName": "Radeon RX 7900 XTX / XT / GRE", "computeTier": "WMMA+INT8", "defaultVramGb": 24, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "745E", "architecture": "RDNA3", "codename": "Navi 31", "familyName": "Radeon RX 7900 Series", "computeTier": "WMMA+INT8", "defaultVramGb": 20, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "7470", "architecture": "RDNA3", "codename": "Navi 32", "familyName": "Radeon RX 7800 XT / 7700 XT", "computeTier": "WMMA+INT8", "defaultVramGb": 16, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "747E", "architecture": "RDNA3", "codename": "Navi 32", "familyName": "Radeon RX 7800 XT / 7700 XT", "computeTier": "WMMA+INT8", "defaultVramGb": 16, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "7480", "architecture": "RDNA3", "codename": "Navi 33", "familyName": "Radeon RX 7600 XT / 7600", "computeTier": "WMMA+INT8", "defaultVramGb": 8, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "73AF", "architecture": "RDNA2", "codename": "Navi 21", "familyName": "Radeon RX 6950 XT / 6900 XT", "computeTier": "INT8-Dot4", "defaultVramGb": 16, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "73AE", "architecture": "RDNA2", "codename": "Navi 21", "familyName": "Radeon RX 6900 / 6800 Series", "computeTier": "INT8-Dot4", "defaultVramGb": 16, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "73BF", "architecture": "RDNA2", "codename": "Navi 21", "familyName": "Radeon RX 6900 XT / 6800 XT / 6800", "computeTier": "INT8-Dot4", "defaultVramGb": 16, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "73DF", "architecture": "RDNA2", "codename": "Navi 22", "familyName": "Radeon RX 6750 XT / 6700 XT / 6700", "computeTier": "INT8-Dot4", "defaultVramGb": 12, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "73EF", "architecture": "RDNA2", "codename": "Navi 23", "familyName": "Radeon RX 6650 XT", "computeTier": "INT8-Dot4", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "73FF", "architecture": "RDNA2", "codename": "Navi 23", "familyName": "Radeon RX 6600 / 6600 XT / 6650 XT", "computeTier": "INT8-Dot4", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "743F", "architecture": "RDNA2", "codename": "Navi 24", "familyName": "Radeon RX 6500 XT / 6400", "computeTier": "INT8-Dot4", "defaultVramGb": 4, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "7310", "architecture": "RDNA1", "codename": "Navi 10", "familyName": "Radeon RX 5700 XT / 5700", "computeTier": "FP16-Shader", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "7312", "architecture": "RDNA1", "codename": "Navi 10", "familyName": "Radeon RX 5700 / Pro", "computeTier": "FP16-Shader", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "731F", "architecture": "RDNA1", "codename": "Navi 10", "familyName": "Radeon RX 5700 XT / 5600 XT", "computeTier": "FP16-Shader", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "7340", "architecture": "RDNA1", "codename": "Navi 14", "familyName": "Radeon RX 5500 XT / 5500", "computeTier": "FP16-Shader", "defaultVramGb": 8, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "7341", "architecture": "RDNA1", "codename": "Navi 14", "familyName": "Radeon RX 5500", "computeTier": "FP16-Shader", "defaultVramGb": 4, "supportsAfmf2Borderless": false, "supportsHwFlipMetering": false },
+    { "deviceId": "15BF", "architecture": "RDNA3", "codename": "Phoenix APU", "familyName": "Radeon 780M / 760M (iGPU)", "computeTier": "INT8-Lite", "defaultVramGb": 0, "isIntegrated": true, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "15C8", "architecture": "RDNA3", "codename": "Phoenix2 APU", "familyName": "Radeon 740M (iGPU)", "computeTier": "INT8-Lite", "defaultVramGb": 0, "isIntegrated": true, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "150E", "architecture": "RDNA3", "codename": "Strix Point APU", "familyName": "Radeon 890M / 880M (iGPU)", "computeTier": "INT8-Lite", "defaultVramGb": 0, "isIntegrated": true, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false },
+    { "deviceId": "1586", "architecture": "RDNA3", "codename": "Strix Halo APU", "familyName": "Radeon 8060S / 8050S (iGPU)", "computeTier": "INT8-WMMA", "defaultVramGb": 0, "isIntegrated": true, "supportsAfmf2Borderless": true, "supportsHwFlipMetering": false }
+  ]
+}

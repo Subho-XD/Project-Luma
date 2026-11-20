@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "backendId": "dlss-nr-on-amd",
+  "backendVersion": "v0.9.0",
+  "officialReleaseUrl": "https://github.com/danielblnc/DLSS-NR-on-AMD/releases/tag/v0.9.0",
+  "licenseUrl": "https://github.com/danielblnc/DLSS-NR-on-AMD/blob/master/LICENSE",
+  "redistributionAllowed": false,
+  "integrationMode": "NeuralHubImportHandoff",
+  "integrationNotes": "DLSS-NR-on-AMD v0.9.0 is distributed via NeuralHub_v0.9.0_setup.exe under a personal non-commercial license prohibiting redistribution or patching. Users acquire NeuralHub from official GitHub Releases and import their legitimate local nvngx_dlssnr.dll into NeuralHub or link verified runtime files.",
+  "models": {
+    "CC": {
+      "modelKey": "CC",
+      "displayName": "CC Model (Fastest)",
+      "requiredDll": "nvngx_dlssnr.dll",
+      "minimumVersion": "310.9.16.0",
+      "notes": "40-80% faster Neural Rendering model added in DLSS-NR-on-AMD v0.9.0; requires nvngx_dlssnr.dll 310.9.16.0 or newer."
+    },
+    "HT": {
+      "modelKey": "HT",
+      "displayName": "HT Model (Standard)",
+      "requiredDll": "nvngx_dlssnr.dll",
+      "minimumVersion": "310.8.0.0",
+      "notes": "Standard DLSS 5 Neural Rendering model; requires nvngx_dlssnr.dll 310.8.0.0 or newer."
+    }
+  },
+  "optionalCompanionDlls": [
+    {
+      "fileName": "nvngx_dlss.dll",
+      "dllKind": "nvngx_dlss",
+      "feature": "SuperResolution",
+      "minimumVersion": "3.5.0.0",
+      "rdna2Supported": true,
+      "notes": "Optional DLSS Super Resolution DLL; not interchangeable with nvngx_dlssnr.dll."
+    },
+    {
+      "fileName": "nvngx_dlssg.dll",
+      "dllKind": "nvngx_dlssg",
+      "feature": "FrameGeneration",
+      "minimumVersion": "3.5.0.0",
+      "rdna2Supported": false,
+      "notes": "Optional DLSS Frame Generation DLL; DLSS-FG is explicitly unavailable on RX 6000 (RDNA 2) in v0.9.0."
+    },
+    {
+      "fileName": "nvngx_dlssd.dll",
+      "dllKind": "nvngx_dlssd",
+      "feature": "RayReconstruction",
+      "minimumVersion": "3.5.0.0",
+      "rdna2Supported": false,
+      "notes": "Optional DLSS Ray Reconstruction DLL (Model F targets RDNA 3 / RDNA 4)."
+    }
+  ],
+  "rdna2Notes": "AMD official HIP SDK 7.2 Windows requirements (https://rocm.docs.amd.com/projects/install-on-windows/en/docs-7.2/reference/system-requirements.html) exclude RX 6600 / gfx1032. DLSS-NR-on-AMD v0.9.0 provides an experimental RDNA 2 HIP path (Superfast / Fast modes only; Reference mode and DLSS-FG are unavailable on RX 6000)."
+}

@@ -1,0 +1,111 @@
+<UserControl x:Class="ProjectLuma.UI.Views.UpdateCentreView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" Margin="{StaticResource PageGutter}">
+            <Grid Margin="{StaticResource HeaderGap}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Downloads &amp; Updates" FontFamily="{StaticResource FontDisplay}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Keep Project Luma and authorized enhancement components verified and up to date."
+                               FontFamily="{StaticResource FontUi}" FontSize="13.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Check for Updates" Style="{StaticResource LumaPrimaryButtonStyle}" Command="{Binding CheckUpdatesNowCommand}" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Summary Bar -->
+            <Border Style="{StaticResource LumaCardStyle}" Margin="{StaticResource SectionGap}">
+                <UniformGrid Columns="3">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Application version" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
+                        <TextBlock Text="{Binding Settings.AppVersion, StringFormat=v{0}}" FontFamily="{StaticResource FontMono}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Sync status" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
+                        <TextBlock Text="{Binding UpdateStatus.CurrentPhase}" FontFamily="{StaticResource FontUi}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AccentOpticalBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Last checked" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" />
+                        <TextBlock Text="{Binding UpdateStatus.LastSuccessfulCheckUtc, StringFormat={}{0:yyyy-MM-dd HH:mm} UTC, TargetNullValue=Checked on startup}" FontFamily="{StaticResource FontMono}" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </UniformGrid>
+            </Border>
+
+            <!-- Structured Component Download & Update Cards (with Live Progress & Cancel) -->
+            <ItemsControl ItemsSource="{Binding UpdateItems}" Margin="{StaticResource SectionGap}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource LumaCardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                        <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding ComponentName}" FontFamily="{StaticResource FontDisplay}" FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            <Border Background="{StaticResource SurfaceSecondaryBrush}" BorderBrush="{StaticResource BorderEmphasisBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusBadge}" Padding="8,2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StateBadgeText}" FontFamily="{StaticResource FontUi}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                            </Border>
+                                        </WrapPanel>
+                                        <TextBlock Text="{Binding Status}" FontFamily="{StaticResource FontUi}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding ReasonText}" Visibility="{Binding ReasonText, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                   FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <TextBlock Text="{Binding InstalledVersion, StringFormat=Installed: {0}}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,0" />
+                                            <TextBlock Text="{Binding AvailableVersion, StringFormat=Latest: {0}}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource AccentOpticalBrush}" />
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="Cancel" Style="{StaticResource LumaDangerButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="12,0" Margin="0,0,8,0"
+                                                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                Command="{Binding DataContext.CancelUpdateItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <Button Content="{Binding ActionLabel}" Style="{StaticResource LumaPrimaryButtonStyle}" Height="{StaticResource ButtonHeightCompact}" Padding="16,0"
+                                                Visibility="{Binding ShowActionButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                                                Command="{Binding DataContext.ApplyUpdateItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Live Download Progress Row -->
+                                <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,12,0,0">
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding Status}" FontFamily="{StaticResource FontUi}" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding DownloadedSizeText}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0" />
+                                            <TextBlock Text="{Binding DownloadSpeedText}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource AccentOpticalBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <ProgressBar Value="{Binding DownloadProgress}" Minimum="0" Maximum="100" Height="6" Foreground="{StaticResource AccentOpticalBrush}" Background="{StaticResource SurfaceInputBrush}" BorderThickness="0" />
+                                </StackPanel>
+
+                                <Border Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        Background="{StaticResource StatusUnsupportedBgBrush}" BorderBrush="{StaticResource StatusUnsupportedBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusButton}" Padding="12" Margin="0,12,0,0">
+                                    <TextBlock Text="{Binding ErrorMessage}" FontFamily="{StaticResource FontUi}" FontSize="12.5" Foreground="#F28B8B" TextWrapping="Wrap" />
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Expander Header="Recent update activity log" Foreground="{StaticResource TextSecondaryBrush}" FontFamily="{StaticResource FontUi}" FontSize="13.5" IsExpanded="False">
+                <Border Style="{StaticResource LumaCardStyle}" Margin="0,12,0,0">
+                    <ItemsControl ItemsSource="{Binding UpdateHistoryRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontFamily="{StaticResource FontMono}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

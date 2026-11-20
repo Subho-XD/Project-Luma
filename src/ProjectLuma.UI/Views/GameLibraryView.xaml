@@ -1,0 +1,206 @@
+<UserControl x:Class="ProjectLuma.UI.Views.GameLibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid MaxWidth="{StaticResource ContentMaxWidth}" Margin="{StaticResource PageGutter}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Clean Page Header (Zero uppercase eyebrow, aligned to shared gutters) -->
+        <Grid Grid.Row="0" Margin="{StaticResource HeaderGap}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="My Games" FontFamily="{StaticResource FontDisplay}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Text="{Binding AllGames.Count, StringFormat={}{0} installed game(s) detected across your PC launchers}"
+                           FontFamily="{StaticResource FontUi}" FontSize="13.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Rescan Libraries" Style="{StaticResource LumaSecondaryButtonStyle}" Command="{Binding RescanLibrariesCommand}" Margin="0,0,12,0" />
+                <Button Content="Add Game" Style="{StaticResource LumaPrimaryButtonStyle}" Command="{Binding AddGameManuallyCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Library Filter Tabs & Compact Controls -->
+        <Grid Grid.Row="1" Margin="{StaticResource HeaderGap}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Quick Status Tabs + Counts -->
+            <Grid Grid.Row="0">
+                <ItemsControl ItemsSource="{Binding LibraryTabs}" HorizontalAlignment="Left">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <RadioButton Style="{StaticResource LumaFilterPillStyle}"
+                                         Content="{Binding}"
+                                         GroupName="LibraryStatusTabs"
+                                         Command="{Binding DataContext.SelectLibraryTabCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         CommandParameter="{Binding}">
+                                <RadioButton.IsChecked>
+                                    <MultiBinding Converter="{StaticResource StringEqualsMultiConverter}" Mode="OneWay">
+                                        <Binding />
+                                        <Binding Path="DataContext.SelectedLibraryTab" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                    </MultiBinding>
+                                </RadioButton.IsChecked>
+                            </RadioButton>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding FilteredGames.Count, StringFormat={}{0} shown}" FontFamily="{StaticResource FontUi}" FontSize="12.5" Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Compact Search, Platform & Sort Row -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <TextBox Style="{StaticResource LumaTextBoxStyle}" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="Search your games..." IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0,0,0"
+                               FontFamily="{StaticResource FontUi}" FontSize="12.5" Foreground="{StaticResource TextTertiaryBrush}"
+                               Visibility="{Binding SearchQuery, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}" />
+                </Grid>
+                <ComboBox Grid.Column="2" Style="{StaticResource LumaComboBoxStyle}" ItemsSource="{Binding LauncherFilters}" SelectedItem="{Binding SelectedLauncherFilter}" />
+                <ComboBox Grid.Column="4" Style="{StaticResource LumaComboBoxStyle}" ItemsSource="{Binding SortOrders}" SelectedItem="{Binding SelectedSortOrder}" />
+                <Button Grid.Column="5" Content="Cancel Scan" Style="{StaticResource LumaDangerButtonStyle}" Command="{Binding CancelScanCommand}" Margin="12,0,0,0"
+                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibilityConverter}}" />
+            </Grid>
+        </Grid>
+
+        <!-- Active Scan Progress Bar -->
+        <Border Grid.Row="2" Style="{StaticResource LumaCardStyle}" Padding="{StaticResource CardPaddingCompact}" Margin="0,0,0,16"
+                Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding ScanStatusMessage}" FontFamily="{StaticResource FontUi}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <ProgressBar Grid.Column="1" Value="{Binding ScanProgressPercent}" Maximum="100" Height="6" Foreground="{StaticResource AccentOpticalBrush}" Background="{StaticResource SurfaceInputBrush}" BorderThickness="0" />
+            </Grid>
+        </Border>
+
+        <!-- Empty Library State -->
+        <Border Grid.Row="3" Style="{StaticResource LumaCardStyle}"
+                Visibility="{Binding FilteredGames.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}"
+                VerticalAlignment="Top" Padding="40">
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="No Matching Games" FontFamily="{StaticResource FontDisplay}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="No games match your current filter or search. Add a game executable or rescan your PC launchers." FontFamily="{StaticResource FontUi}" FontSize="13.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,20" TextAlignment="Center" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Add Game" Style="{StaticResource LumaPrimaryButtonStyle}" Command="{Binding AddGameManuallyCommand}" Margin="0,0,12,0" />
+                    <Button Content="Rescan Libraries" Style="{StaticResource LumaSecondaryButtonStyle}" Command="{Binding RescanLibrariesCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Virtualized Portrait Cover Grid (1,000+ games smooth) -->
+        <ListBox Grid.Row="3"
+                 ItemsSource="{Binding VirtualGameRows}"
+                 SizeChanged="OnLibraryGridSizeChanged"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.CanContentScroll="True"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 Visibility="{Binding FilteredGames.Count, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0,0,0,16" />
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <ContentPresenter />
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <ItemsControl ItemsSource="{Binding Cards}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.OpenGameDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Margin="0,0,16,0"
+                                        Cursor="Hand"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        FocusVisualStyle="{StaticResource LumaFocusVisual}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="CardBorder" Width="196" Height="296" CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderHairlineBrush}" BorderThickness="1.5" ClipToBounds="True">
+                                                <Grid>
+                                                    <!-- Portrait Cover Artwork -->
+                                                    <Image Source="{Binding CoverImagePath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=280}"
+                                                           Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+
+                                                    <!-- Fallback Typography Crest ONLY when game has no external cover image -->
+                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+                                                                Visibility="{Binding IsGeneratedFallbackArt, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock Text="{Binding Monogram}" FontFamily="{StaticResource FontDisplay}" FontSize="40" FontWeight="Bold" Foreground="#33FFFFFF" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource FontDisplay}" FontSize="15" FontWeight="SemiBold" Foreground="#EAEAEA" TextWrapping="Wrap" TextAlignment="Center" MaxHeight="66" TextTrimming="CharacterEllipsis" Margin="0,8,0,0" />
+                                                    </StackPanel>
+
+                                                    <Rectangle Fill="{StaticResource CoverBottomScrimBrush}" VerticalAlignment="Bottom" Height="116" />
+
+                                                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" CornerRadius="{StaticResource RadiusBadge}" Padding="8,3" Background="#B8101010" BorderBrush="#26FFFFFF" BorderThickness="1">
+                                                        <TextBlock Text="{Binding LauncherBadge}" FontFamily="{StaticResource FontUi}" FontSize="10.5" FontWeight="SemiBold" Foreground="#F6F6F6" />
+                                                    </Border>
+
+                                                    <StackPanel VerticalAlignment="Bottom" Margin="12,0,12,12">
+                                                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource FontDisplay}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}" />
+                                                        <Border HorizontalAlignment="Left" Margin="0,6,0,0" CornerRadius="{StaticResource RadiusBadge}" Padding="8,3" BorderThickness="1"
+                                                                Background="{Binding FriendlyStatus, Converter={StaticResource FriendlyStatusBrushConverter}, ConverterParameter=bg}"
+                                                                BorderBrush="{Binding FriendlyStatus, Converter={StaticResource FriendlyStatusBrushConverter}}">
+                                                            <TextBlock Text="{Binding FriendlyStatusText}" FontFamily="{StaticResource FontUi}" FontSize="11" FontWeight="SemiBold"
+                                                                       Foreground="{Binding FriendlyStatus, Converter={StaticResource FriendlyStatusBrushConverter}}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource AccentOpticalBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

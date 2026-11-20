@@ -1,0 +1,10 @@
+﻿# Project Luma v3.2.0 — Release Notes
+
+## Highlights
+- **Launcher Redesign & Strict 4-Point Design System:** Rebuilt navigation and game hub presentation around a dominant featured-game hero banner (Play, Enhance, Configure), equal-edge 4-column 16:9 thumbnail gallery (Resume my games), quiet sidebar (Home, My Games, Enhancement Library, Downloads, Settings), supplied Project Luma ghost icon assets, Google Sans + Space Mono typography (SIL OFL-1.1), and AMD obsidian/crimson surface tokens across every window and DPI scale.
+- **Categorized Enhancement Library:** Separate navigation destination organized across **AI Visual Enhancement**, **Super Resolution**, **Frame Generation**, and **Reconstruction** with truthful status badges (Installed, Ready to Install, Driver managed, Experimental, Setup Required, Not Compatible, Failed) and bundled component routing.
+- **Live RX 6600 HIP Probe & 8-State Neural Rendering Diagnostics:** Dynamically probes initialized mdhip64_6.dll (hipRuntimeGetVersion / hipGetDeviceCount) alongside HIP 7.2 SDK (mdhip64_7.dll) availability while truthfully disclosing gfx1032 exclusion and isolating 
+vngx_dlssnr.dll (>= 310.8.0.0 HT / >= 310.9.16.0 CC) from 
+vngx_dlss.dll.
+- **Responsive Download & SHA-256 Digest Pipeline:** Concurrent bounded downloads (SemaphoreSlim(2,2)), 30s per-chunk socket stall timeout, HTTP 429 backpressure handling, automatic GitHub release sset.digest (sha256:) enforcement, and live progress + cancellation in both Enhancement Library and Downloads.
+- **Fixed Standalone GUI Installer (ProjectLuma-Setup-x64.exe):** Resolved single-file XamlParseException crash by packing project-luma.ico as an embedded WPF <Resource>, eliminated synchronous startup extraction stalls so GUI setup opens immediately, unified 4-point styling in SetupTokens.xaml, and verified clean install, upgrade, repair, and SHA-256 backup-restoring uninstall flows.

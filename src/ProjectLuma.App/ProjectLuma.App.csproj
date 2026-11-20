@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>ProjectLuma</AssemblyName>
+    <Version>3.3.0</Version>
+    <ApplicationTitle>Project Luma</ApplicationTitle>
+    <ApplicationIcon>project-luma.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectLuma.Core\ProjectLuma.Core.csproj" />
+    <ProjectReference Include="..\ProjectLuma.Logging\ProjectLuma.Logging.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GpuDetection\ProjectLuma.GpuDetection.csproj" />
+    <ProjectReference Include="..\ProjectLuma.Compatibility\ProjectLuma.Compatibility.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GameDiscovery\ProjectLuma.GameDiscovery.csproj" />
+    <ProjectReference Include="..\ProjectLuma.PackageManager\ProjectLuma.PackageManager.csproj" />
+    <ProjectReference Include="..\ProjectLuma.BackendManager\ProjectLuma.BackendManager.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GameInstaller\ProjectLuma.GameInstaller.csproj" />
+    <ProjectReference Include="..\ProjectLuma.UpdateService\ProjectLuma.UpdateService.csproj" />
+    <ProjectReference Include="..\ProjectLuma.UI\ProjectLuma.UI.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\data\**\*">
+      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\backends\**\*">
+      <Link>backends\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\fonts\OFL-*.txt">
+      <Link>licenses\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\branding\project-luma-icon.*">
+      <Link>branding\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="project-luma.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+{
+  "framework": "NET10_WPF_Virtualized",
+  "coldStartupMs": 468.94,
+  "idleWorkingSetMb": 131.44,
+  "loaded1000WorkingSetMb": 141.01,
+  "artworkDecode200pxMs": 26.06,
+  "virtualize1000LayoutMs": 33.94,
+  "search1000Ms": 1.28,
+  "filteredMatches": 11,
+  "cpuTimeMs": 656.25
+}

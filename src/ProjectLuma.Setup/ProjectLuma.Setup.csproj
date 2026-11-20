@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>ProjectLuma-Setup-x64</AssemblyName>
+    <RootNamespace>ProjectLuma.Setup</RootNamespace>
+    <Version>3.3.0</Version>
+    <Product>Project Luma Installer</Product>
+    <Company>Project Luma</Company>
+    <ApplicationIcon>project-luma.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Branding\project-luma-icon.png" />
+    <Resource Include="Assets\Fonts\GoogleSans.ttf" />
+    <Resource Include="Assets\Fonts\SpaceMono-Regular.ttf" />
+    <Resource Include="Assets\Fonts\SpaceMono-Bold.ttf" />
+    <Resource Include="project-luma.ico" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EmbeddedPayloadZip)' != '' and Exists('$(EmbeddedPayloadZip)')">
+    <EmbeddedResource Include="$(EmbeddedPayloadZip)" LogicalName="ProjectLuma.Setup.payload.zip" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectLuma.Core\ProjectLuma.Core.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GpuDetection\ProjectLuma.GpuDetection.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GameDiscovery\ProjectLuma.GameDiscovery.csproj" />
+    <ProjectReference Include="..\ProjectLuma.GameInstaller\ProjectLuma.GameInstaller.csproj" />
+    <ProjectReference Include="..\ProjectLuma.Logging\ProjectLuma.Logging.csproj" />
+  </ItemGroup>
+</Project>

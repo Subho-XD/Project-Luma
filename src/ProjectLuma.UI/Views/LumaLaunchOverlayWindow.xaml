@@ -1,0 +1,34 @@
+<Window x:Class="ProjectLuma.UI.Views.LumaLaunchOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="368" SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Focusable="False"
+        ResizeMode="NoResize"
+        Opacity="0">
+    <Border Background="#F4141414" BorderBrush="#ED1C24" BorderThickness="1.5" CornerRadius="12" Padding="20,16">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Exact Project Luma Ghost Icon -->
+            <Image Grid.Column="0" Source="{StaticResource LumaLogoDrawingImage}" Width="40" Height="40" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality" />
+
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="PROJECT LUMA" FontFamily="{StaticResource FontDisplay}" FontSize="12" FontWeight="Bold" Foreground="#ED1C24" />
+                <TextBlock x:Name="GameTitleText" Text="GAME NAME" FontFamily="{StaticResource FontDisplay}" FontSize="17" FontWeight="Bold" Foreground="#F6F6F6" TextTrimming="CharacterEllipsis" Margin="0,4,0,2" />
+                <TextBlock x:Name="ProfileStatusText" Text="BALANCED PROFILE ACTIVE" FontFamily="{StaticResource FontMono}" FontSize="11" Foreground="#55C78A" Margin="0,0,0,8" />
+                <TextBlock x:Name="EnhancementsSummaryText" Text="Image Quality&#x0a;Gameplay Smoothness" FontFamily="{StaticResource FontUi}" FontSize="12.5" LineHeight="18" Foreground="#D4D4D4" TextWrapping="Wrap" Margin="0,0,0,8" />
+                <TextBlock Text="Enjoy your game." FontFamily="{StaticResource FontUi}" FontSize="12" FontWeight="Medium" Foreground="#828282" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

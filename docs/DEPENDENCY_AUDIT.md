@@ -1,0 +1,15 @@
+# Project Luma — Third-Party Dependency & Upstream Audit
+
+**Verification Timestamp:** 2026-11-20 (Live GitHub API & Google Fonts Check)
+
+| Component / Font | Upstream Source | Verified Version / Release Date | License | Distribution Policy in Project Luma |
+|---|---|---|---|---|
+| **OptiScaler** | `https://github.com/OptiScaler/OptiScaler/releases` | Latest final: `v0.9.5` (`2026-11-16T19:17:35Z`, asset `Optiscaler_0.9.5-final.20261116.7z`, `70,418,897` bytes); prior final `v0.9.4` (`2026-07-18`). Preview `v10` builds are separated and never treated as stable by default. | GPL-3.0 | Fetched at runtime strictly from official GitHub Releases API when user triggers enhancement/setup; never mirrored on third-party servers. |
+| **DLSS-NR-on-AMD (NeuralHub Supermod)** | `https://github.com/danielblnc/DLSS-NR-on-AMD/releases` | `v0.9.0` ("Alpha 0.9.0", `2026-11-18T07:34:12Z`, asset `NeuralHub_v0.9.0_setup.exe`, `30,925,039` bytes). Introduces CC model requiring `nvngx_dlssnr.dll >= 310.9.16.0` and Superfast RDNA 2/3 tier. | Custom Non-Commercial / No Redistribution | **Never** bundled, mirrored, repackaged, or auto-downloaded without upstream permission. Project Luma links official GitHub release page & detects existing local installations. |
+| **AMD HIP SDK 7.2 (`amdhip64_7.dll`)** | `https://rocm.docs.amd.com/projects/install-on-windows/en/docs-7.2/reference/system-requirements.html` | `7.2` (RX 6600 / `gfx1032` explicitly listed as unsupported in AMD's official table; community RDNA 2 path remains experimental). | AMD Proprietary EULA | Detected locally (`System32` / `HIP_PATH`); never bundled or represented as officially supported on `gfx1032`. |
+| **AMD Fluid Motion Frames (`AFMF 2.1`)** | AMD Software: Adrenalin Edition | Driver-level feature | AMD Driver EULA | Displayed strictly as driver-managed functionality with guided instructions; never touches undocumented registry keys. |
+| **NVIDIA NGX Model DLLs (`nvngx_dlssnr.dll`)** | User-owned legitimate PC game installations | `>= 310.9.16.0` (CC) / `>= 310.8.0.0` (HT) | NVIDIA Proprietary | Scanned locally inside user game directories on request (`ScanGameLibrariesForUserDllsAsync`) with PE64/signature verification; **never** downloaded or redistributed. |
+| **AMDLSS5** | `https://github.com/Wehaveall/AMDLSS5/releases` | `v2.0.0` (`2026-11-06`) | Upstream Notice (Excludes RX 6000) | Reference catalog only on RDNA 2; excluded on RX 6600. |
+| **Google Sans** | `https://github.com/google/fonts/tree/main/ofl/googlesans` | Variable TTF (`GoogleSans[GRAD,opsz,wght].ttf`) | SIL Open Font License 1.1 (`OFL-GoogleSans.txt`) | Bundled cleanly with official `OFL-GoogleSans.txt` notice. |
+| **Space Mono** | `https://github.com/googlefonts/spacemono` | `SpaceMono-Regular.ttf`, `SpaceMono-Bold.ttf` | SIL Open Font License 1.1 (`OFL-SpaceMono.txt`) | Bundled cleanly with official `OFL-SpaceMono.txt` notice. |
+| **Microsoft.Data.Sqlite / Hosting / SharpCompress** | NuGet | `11.0.0` / `0.38+` | MIT | Standard managed libraries via NuGet. |

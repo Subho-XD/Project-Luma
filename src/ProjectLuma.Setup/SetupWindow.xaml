@@ -1,0 +1,261 @@
+<Window x:Class="ProjectLuma.Setup.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ProjectLuma.Setup"
+        Title="Project Luma Setup — v3.3.0"
+        Width="860" Height="700"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/ProjectLuma-Setup-x64;component/project-luma.ico"
+        Background="{StaticResource SetupBgBrush}"
+        Foreground="{StaticResource SetupTextPrimaryBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/SetupTokens.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <local:StatusToBackgroundConverter x:Key="StatusBgConv" />
+            <local:StatusToBorderConverter x:Key="StatusBorderConv" />
+            <local:StatusToForegroundConverter x:Key="StatusFgConv" />
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource SetupBgBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Brand & 3-Stage Rail -->
+        <Border Grid.Column="0" Background="{StaticResource SetupSidebarBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="0,0,1,0" Padding="{StaticResource SetupContentMargin}">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,28">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource SetupAccentBrush}" ClipToBounds="True" Margin="0,0,12,0">
+                            <Image Source="pack://application:,,,/ProjectLuma-Setup-x64;component/Assets/Branding/project-luma-icon.png"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="PROJECT LUMA" FontSize="15.5" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                            <TextBlock Text="Installer · v3.3.0" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{StaticResource SetupAccentBrush}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border DockPanel.Dock="Bottom" Background="#1D1D1D" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="{StaticResource SetupControlRadius}" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Detected hardware" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SetupTextMutedBrush}" />
+                        <TextBlock x:Name="SidebarGpuText" Text="Detecting graphics hardware..." FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" TextWrapping="Wrap" Margin="0,4,0,2" />
+                        <TextBlock Text="Windows 10/11 (x64) · Safe Backup Recovery" FontSize="11" Foreground="{StaticResource SetupTextMutedBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel>
+                    <TextBlock Text="Setup steps" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource SetupTextMutedBrush}" Margin="0,0,0,12" />
+
+                    <Border x:Name="StepBadge1" CornerRadius="{StaticResource SetupControlRadius}" Padding="12" Margin="0,0,0,8" Background="#251618" BorderBrush="{StaticResource SetupAccentBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="StepText1" Text="1. Welcome" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                            <TextBlock Text="Overview &amp; privacy terms" FontSize="11" Foreground="#9A9A9A" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="StepBadge2" CornerRadius="{StaticResource SetupControlRadius}" Padding="12" Margin="0,0,0,8" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="StepText2" Text="2. System Check" FontSize="13.5" FontWeight="Medium" Foreground="#8E8E8E" />
+                            <TextBlock Text="GPU target, driver &amp; disk" FontSize="11" Foreground="#7A7A7A" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="StepBadge3" CornerRadius="{StaticResource SetupControlRadius}" Padding="12" Margin="0,0,0,8" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="StepText3" Text="3. Install &amp; Finish" FontSize="13.5" FontWeight="Medium" Foreground="#8E8E8E" />
+                            <TextBlock Text="Destination, install &amp; launch" FontSize="11" Foreground="#7A7A7A" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Right Content & Footer -->
+        <Grid Grid.Column="1" Margin="{StaticResource SetupContentMargin}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- STAGE 1: WELCOME -->
+            <ScrollViewer x:Name="Stage1Panel" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+                <StackPanel>
+                    <TextBlock Text="v3.3.0" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource SetupAccentBrush}" Margin="0,0,0,4" />
+                    <TextBlock Text="PROJECT LUMA" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                    <TextBlock Text="Your AMD Gaming Enhancement Companion." FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource SetupAccentBrush}" Margin="0,4,0,12" />
+                    <TextBlock Text="Automatically detect your AMD Radeon graphics card, organize installed games, apply recommended visual and frame-rate improvements, and launch games directly with safe original-file recovery."
+                               FontSize="13.5" Foreground="{StaticResource SetupTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" LineHeight="20" />
+
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <StackPanel>
+                            <TextBlock Text="What this installer sets up" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" Margin="0,0,0,12" />
+                            <TextBlock Text="• Standalone Project Luma desktop launcher &amp; bundled .NET 10 runtime" FontSize="13" Foreground="#E2E2E2" Margin="0,0,0,8" />
+                            <TextBlock Text="• Automatic multi-store game detection &amp; AMD architecture compatibility engine" FontSize="13" Foreground="#E2E2E2" Margin="0,0,0,8" />
+                            <TextBlock Text="• Windows Installed Apps registration + dedicated uninstaller with safe game restore" FontSize="13" Foreground="#E2E2E2" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Collapsible License & Privacy Card -->
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}">
+                        <StackPanel>
+                            <Grid>
+                                <CheckBox x:Name="AcceptLicenseCheck"
+                                          AutomationProperties.AutomationId="SetupAcceptLicenseCheck"
+                                          IsChecked="True"
+                                          Content="I accept the open-source license and local privacy terms."
+                                          Checked="OnLicenseChanged"
+                                          Unchecked="OnLicenseChanged" />
+                                <Button Content="License &amp; Privacy Details"
+                                        HorizontalAlignment="Right"
+                                        Click="OnToggleLicenseDetailsClick"
+                                        Background="Transparent" BorderThickness="0" Foreground="{StaticResource SetupAccentBrush}" FontSize="12" FontWeight="SemiBold" Cursor="Hand" />
+                            </Grid>
+
+                            <Border x:Name="LicenseDetailsBox" Visibility="Collapsed" Background="#121212" BorderBrush="#262626" BorderThickness="1" CornerRadius="{StaticResource SetupControlRadius}" Padding="12" Margin="0,12,0,0">
+                                <TextBlock FontSize="11.5" Foreground="#A8A8A8" TextWrapping="Wrap" LineHeight="17">
+                                    Project Luma runs completely locally with zero telemetry or background analytics. Proprietary third-party or NVIDIA DLLs are never bundled, mirrored, or redistributed — users import or locate their own legitimate local files when optional enhancements request them. All open-source notices (including SIL OFL-1.1 for Google Sans &amp; Space Mono) are copied into the licenses folder.
+                                </TextBlock>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- STAGE 2: SYSTEM CHECK -->
+            <Grid x:Name="Stage2Panel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Text="System Check" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                    <TextBlock Text="Confirming your Windows environment, AMD Radeon GPU target, driver, and storage." FontSize="13" Foreground="#9A9A9A" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <Border x:Name="CompatSummaryBanner" Grid.Row="1" Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderEmphasisBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                    <DockPanel LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Content="Re-check" Style="{StaticResource SecondaryButton}" Height="32" FontSize="12" Padding="12,0" Click="OnRecheckSystemClick" VerticalAlignment="Center" Margin="12,0,0,0" />
+                        <StackPanel>
+                            <TextBlock x:Name="CompatSummaryTitle" Text="Checking hardware..." FontSize="14.5" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                            <TextBlock x:Name="CompatSummaryDetail" Text="Inspecting graphics adapter, memory, and target drive..." FontSize="12.5" Foreground="{StaticResource SetupTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="CompatItemsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupControlRadius}" Padding="12" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                            <TextBlock TextWrapping="Wrap">
+                                                <Run Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                                                <Run Text=" · " FontSize="12.5" Foreground="#666666" />
+                                                <Run Text="{Binding Value}" FontSize="12.5" Foreground="#D4D4D4" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="#909090" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1"
+                                                Background="{Binding Status, Converter={StaticResource StatusBgConv}}"
+                                                BorderBrush="{Binding Status, Converter={StaticResource StatusBorderConv}}"
+                                                BorderThickness="1"
+                                                CornerRadius="12"
+                                                Padding="12,4"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusFgConv}}" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- STAGE 3: INSTALL & FINISH -->
+            <ScrollViewer x:Name="Stage3Panel" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="Stage3TitleText" Text="Install Project Luma" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                    <TextBlock x:Name="Stage3SubtitleText" Text="Choose your installation folder and launch Project Luma when ready." FontSize="13" Foreground="#9A9A9A" Margin="0,4,0,16" />
+
+                    <!-- Destination Path Card -->
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <StackPanel>
+                            <TextBlock Text="Destination folder" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" Margin="0,0,0,8" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="InstallDirBox"
+                                         AutomationProperties.AutomationId="SetupInstallDirBox"
+                                         Grid.Column="0"
+                                         Background="#121212"
+                                         Foreground="{StaticResource SetupTextPrimaryBrush}"
+                                         BorderBrush="{StaticResource SetupBorderEmphasisBrush}"
+                                         BorderThickness="1"
+                                         Padding="12,8"
+                                         FontFamily="{StaticResource MonoFont}"
+                                         FontSize="12"
+                                         TextChanged="OnInstallDirChanged" />
+                                <Button x:Name="BrowseBtn" Grid.Column="1" Content="Browse…" Style="{StaticResource SecondaryButton}" Height="36" Margin="12,0,0,0" Click="OnBrowseClick" />
+                            </Grid>
+                            <TextBlock x:Name="DiskSpaceText" Text="Required: ~220 MB" FontSize="12" Foreground="#949494" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Shortcut Options (pre-install) -->
+                    <Border x:Name="InstallShortcutsCard" Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <StackPanel>
+                            <CheckBox x:Name="DesktopShortcutCheck" AutomationProperties.AutomationId="SetupDesktopShortcutCheck" IsChecked="True" Content="Create desktop shortcut (Project Luma)" Margin="0,0,0,8" />
+                            <CheckBox x:Name="StartMenuShortcutCheck" AutomationProperties.AutomationId="SetupStartMenuShortcutCheck" IsChecked="True" Content="Add Project Luma &amp; Uninstall shortcuts to Start Menu" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Installation Progress Card -->
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock x:Name="InstallPercentText" DockPanel.Dock="Right" Text="0%" FontFamily="{StaticResource MonoFont}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SetupAccentBrush}" />
+                                <TextBlock x:Name="InstallPhaseText" AutomationProperties.AutomationId="SetupInstallPhaseText" Text="Ready to install Project Luma v3.3.0." FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                            </DockPanel>
+                            <ProgressBar x:Name="InstallProgressBar" Style="{StaticResource LumaProgressBar}" Minimum="0" Maximum="100" Value="0" />
+                            <TextBlock x:Name="InstallErrorText" Visibility="Collapsed" FontSize="12" Foreground="{StaticResource SetupErrorBrush}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Post-Install Completion Options -->
+                    <Border x:Name="FinishOptionsCard" Visibility="Collapsed" Background="{StaticResource SetupSuccessBgBrush}" BorderBrush="{StaticResource SetupSuccessBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}">
+                        <StackPanel>
+                            <TextBlock x:Name="CompletePathSummary" AutomationProperties.AutomationId="SetupCompletePathSummary" Text="Project Luma v3.3.0 is installed cleanly." FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SetupSuccessBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                            <CheckBox x:Name="LaunchAfterFinishCheck" AutomationProperties.AutomationId="SetupLaunchAfterFinishCheck" IsChecked="True" Content="Launch Project Luma" Margin="0,0,0,8" />
+                            <CheckBox x:Name="FinishDesktopShortcutCheck" IsChecked="True" Content="Create desktop shortcut" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer Navigation -->
+            <Grid Grid.Row="1" Margin="{StaticResource SetupFooterMargin}">
+                <Button x:Name="CancelBtn" AutomationProperties.AutomationId="SetupCancelBtn" Content="Cancel" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="OnCancelClick" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BackBtn" AutomationProperties.AutomationId="SetupBackBtn" Content="Back" Style="{StaticResource SecondaryButton}" Margin="0,0,12,0" Click="OnBackClick" />
+                    <Button x:Name="NextBtn" AutomationProperties.AutomationId="SetupNextBtn" Content="Install Project Luma" Style="{StaticResource PrimaryCtaButton}" Click="OnNextClick" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,120 @@
+<Window x:Class="ProjectLuma.Setup.UninstallWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Project Luma Maintenance &amp; Uninstaller — v3.3.0"
+        Width="780" Height="590"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/ProjectLuma-Setup-x64;component/project-luma.ico"
+        Background="{StaticResource SetupBgBrush}"
+        Foreground="{StaticResource SetupTextPrimaryBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/SetupTokens.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource SetupBgBrush}">
+        <Grid Margin="{StaticResource SetupContentMargin}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Branded Header -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock x:Name="VersionBadgeText" DockPanel.Dock="Right" Text="v3.3.0" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{StaticResource SetupAccentBrush}" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource SetupAccentBrush}" ClipToBounds="True" Margin="0,0,12,0">
+                        <Image Source="pack://application:,,,/ProjectLuma-Setup-x64;component/Assets/Branding/project-luma-icon.png"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Project Luma Maintenance" FontSize="20" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" />
+                        <TextBlock x:Name="InstallPathSubtitle" Text="Inspecting installed location..." FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#9A9A9A" Margin="0,4,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Main Options View -->
+            <ScrollViewer x:Name="MainOptionsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+                <StackPanel>
+                    <!-- Installation Inventory Summary -->
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Enhanced games" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource SetupTextMutedBrush}" />
+                                <TextBlock x:Name="EnhancedGamesCountText" Text="0 games" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" Margin="0,4,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Game backups" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource SetupTextMutedBrush}" />
+                                <TextBlock x:Name="BackupsSizeText" Text="0.0 MB" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SetupSuccessBrush}" Margin="0,4,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Cache &amp; logs" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource SetupTextMutedBrush}" />
+                                <TextBlock x:Name="CacheSizeText" Text="0.0 MB" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SetupTextSecondaryBrush}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Explicit Safe Removal Choices -->
+                    <Border Background="{StaticResource SetupCardBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupCardPadding}" Margin="{StaticResource SetupCardGap}">
+                        <StackPanel>
+                            <TextBlock Text="Recovery &amp; removal options" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource SetupTextPrimaryBrush}" Margin="0,0,0,12" />
+
+                            <CheckBox x:Name="RestoreGamesCheck" AutomationProperties.AutomationId="UninstallRestoreGamesCheck" IsChecked="True" Content="Restore enhanced games to their original backed-up files first" Margin="0,0,0,4" />
+                            <TextBlock Text="Checks SHA-256 hashes before cleanup. Unrelated game files and third-party mods are never deleted."
+                                       FontSize="11.5" Foreground="#8E8E8E" Margin="28,0,0,12" TextWrapping="Wrap" />
+
+                            <CheckBox x:Name="PreserveBackupsCheck" AutomationProperties.AutomationId="UninstallPreserveBackupsCheck" IsChecked="True" Content="Preserve per-game &amp; central backup archives on disk" Margin="0,0,0,4" />
+                            <TextBlock Text="Keeps safety backup copies even after Project Luma is removed."
+                                       FontSize="11.5" Foreground="#8E8E8E" Margin="28,0,0,12" TextWrapping="Wrap" />
+
+                            <CheckBox x:Name="RemoveCachePrefsCheck" AutomationProperties.AutomationId="UninstallRemoveCacheCheck" IsChecked="False" Content="Remove local preferences, artwork cache, downloads, and log files" Margin="0,0,0,4" />
+                            <TextBlock Text="Clears %LocalAppData%\ProjectLuma settings and cached archives."
+                                       FontSize="11.5" Foreground="#8E8E8E" Margin="28,0,0,12" TextWrapping="Wrap" />
+
+                            <DockPanel>
+                                <Button x:Name="ExportDiagNowBtn" DockPanel.Dock="Right" Content="Save Report…" Style="{StaticResource SecondaryButton}" Height="32" FontSize="12" Padding="12,0" Click="OnExportDiagnosticsClick" />
+                                <CheckBox x:Name="ExportDiagnosticsCheck" IsChecked="False" Content="Save a diagnostic report to Desktop before uninstalling" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock x:Name="StatusBannerText" Visibility="Collapsed" FontSize="12.5" Foreground="{StaticResource SetupWarningBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Completion Summary View -->
+            <Border x:Name="CompletePanel" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource SetupSidebarBrush}" BorderBrush="{StaticResource SetupBorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource SetupCardRadius}" Padding="{StaticResource SetupContentMargin}" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock x:Name="CompletePillText" Text="Uninstall Complete" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource SetupSuccessBrush}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="CompleteHeadlineText" AutomationProperties.AutomationId="UninstallCompleteHeadline" Text="Project Luma has been removed cleanly." FontSize="22" FontWeight="Bold" Foreground="{StaticResource SetupTextPrimaryBrush}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="CompleteDetailText" Text="All application binaries, shortcuts, and Windows Installed Apps entries have been cleaned up." FontSize="13.5" Foreground="{StaticResource SetupTextSecondaryBrush}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,16" />
+                    <Border Background="#121212" BorderBrush="#282828" BorderThickness="1" CornerRadius="{StaticResource SetupControlRadius}" Padding="16">
+                        <TextBlock x:Name="CompleteReportText" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="#D4D4D4" TextWrapping="Wrap" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2" Margin="{StaticResource SetupFooterMargin}">
+                <Button x:Name="CancelBtn" Content="Cancel" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="OnCancelClick" />
+                <StackPanel x:Name="ActionButtonsPanel" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="RepairBtn" AutomationProperties.AutomationId="UninstallRepairBtn" Content="Repair Installation" Style="{StaticResource SecondaryButton}" Margin="0,0,12,0" Click="OnRepairClick" />
+                    <Button x:Name="UninstallBtn" AutomationProperties.AutomationId="UninstallRunBtn" Content="Uninstall Project Luma" Style="{StaticResource PrimaryCtaButton}" Click="OnUninstallClick" />
+                </StackPanel>
+                <Button x:Name="CloseAfterFinishBtn" AutomationProperties.AutomationId="UninstallCloseBtn" Content="Close" Style="{StaticResource PrimaryCtaButton}" HorizontalAlignment="Right" Visibility="Collapsed" Click="OnCancelClick" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
