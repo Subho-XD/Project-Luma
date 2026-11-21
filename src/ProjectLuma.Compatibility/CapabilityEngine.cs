@@ -367,6 +367,16 @@ public sealed class CapabilityEngine : ICapabilityEngine
 
     public static void PopulateFriendlyStatuses(DiscoveredGame game, GameEnhancementProfile profile)
     {
+        if (!game.IsAvailable)
+        {
+            game.FriendlyStatus = FriendlyGameStatus.Unavailable;
+            game.FriendlyStatusText = "Unavailable";
+            game.RecommendationSummary = string.IsNullOrWhiteSpace(game.AvailabilityReason)
+                ? "Game installation path is currently unavailable. Reconnect the drive to restore access."
+                : game.AvailabilityReason;
+            return;
+        }
+
         profile.AiVisualStatusText = profile.NeuralRenderingState switch
         {
             CapabilityState.Supported => profile.EnableNeuralRendering ? "Included in your profile" : "Ready",

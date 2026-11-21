@@ -173,6 +173,25 @@ public sealed class SqliteCompatibilityRepository : ICompatibilityRepository
         await tx.CommitAsync(ct);
     }
 
+    public async Task UpsertDiscoveredGameAsync(DiscoveredGame game, CancellationToken ct = default)
+    {
+        await InitializeAsync(ct);
+        await using var conn = new SqliteConnection($"Data Source={_dbPath}");
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO DiscoveredGames (Id, Title, InstallDirectory, Json, UpdatedUtc)
+            VALUES ($id, $title, $dir, $json, $now)
+            ON CONFLICT(Id) DO UPDATE SET Title=$title, InstallDirectory=$dir, Json=$json, UpdatedUtc=$now;
+            """;
+        cmd.Parameters.AddWithValue("$id", game.Id);
+        cmd.Parameters.AddWithValue("$title", game.Title);
+        cmd.Parameters.AddWithValue("$dir", game.InstallDirectory);
+        cmd.Parameters.AddWithValue("$json", JsonSerializer.Serialize(game, JsonOptions));
+        cmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
     public async Task<IReadOnlyList<DiscoveredGame>> LoadDiscoveredGamesAsync(CancellationToken ct = default)
     {
         await InitializeAsync(ct);
@@ -385,7 +404,7 @@ public sealed class SqliteCompatibilityRepository : ICompatibilityRepository
 
     private static AppSettingsModel EnsureSettingDefaults(AppSettingsModel model)
     {
-        model.AppVersion = "3.3.1";
+        model.AppVersion = "3.3.2";
         if (string.IsNullOrWhiteSpace(model.BackupRootPath))
         {
             model.BackupRootPath = LumaPaths.GetSubdirectory("backups");

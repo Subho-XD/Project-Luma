@@ -52,7 +52,7 @@ public sealed class AppSettingsModel
     public bool LaunchOnWindowsStartup { get; set; } = false;
     public bool MinimizeToTray { get; set; } = false;
     public bool CompactDensity { get; set; } = false;
-    public string AppVersion { get; set; } = "3.3.1";
+    public string AppVersion { get; set; } = "3.3.2";
     public bool HasCompletedOnboarding { get; set; } = false;
     public bool EnableRemoteArtworkLookup { get; set; } = true;
     public bool SteamGridDbKeyConfigured { get; set; } = false;
@@ -80,6 +80,7 @@ public sealed class UpdateCoordinatorStatus
     public int RateLimitRemaining { get; set; } = 60;
     public string CurrentPhase { get; set; } = "Idle";
     public int ProgressPercent { get; set; }
+    public UpdateCheckItem? ApplicationUpdateItem { get; set; }
     public List<UpdateCheckItem> Items { get; set; } = new();
 }
 
@@ -89,8 +90,12 @@ public sealed class UpdateCheckItem : INotifyPropertyChanged
     private string _availableVersion = string.Empty;
     private string _status = "Up to date";
     private string _stateBadgeText = "Installed";
+    private AppUpdateState _updateState = AppUpdateState.Idle;
     private string _actionLabel = string.Empty;
     private string _reasonText = string.Empty;
+    private string _releaseNotes = string.Empty;
+    private string _publisherSignatureSummary = string.Empty;
+    private string _verificationDetails = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _canApply;
     private bool _canRollback;
@@ -113,6 +118,30 @@ public sealed class UpdateCheckItem : INotifyPropertyChanged
     public string Status { get => _status; set => SetField(ref _status, value); }
     public string StateBadgeText { get => _stateBadgeText; set => SetField(ref _stateBadgeText, value); }
 
+    public AppUpdateState UpdateState
+    {
+        get => _updateState;
+        set
+        {
+            if (SetField(ref _updateState, value))
+                OnPropertyChanged(nameof(UpdateStateLabel));
+        }
+    }
+
+    public string UpdateStateLabel => UpdateState switch
+    {
+        AppUpdateState.CheckingForUpdates => "Checking for updates",
+        AppUpdateState.AlreadyUpToDate => "Already up to date",
+        AppUpdateState.UpdateAvailable => "Update available",
+        AppUpdateState.Downloading => "Downloading",
+        AppUpdateState.VerifyingPackage => "Verifying package",
+        AppUpdateState.PreparingInstallation => "Preparing installation",
+        AppUpdateState.Installing => "Installing",
+        AppUpdateState.UpdateCompleted => "Update completed",
+        AppUpdateState.UpdateFailed => "Update failed",
+        _ => StateBadgeText
+    };
+
     public string ActionLabel
     {
         get => _actionLabel;
@@ -125,6 +154,20 @@ public sealed class UpdateCheckItem : INotifyPropertyChanged
 
     public bool ShowActionButton => !string.IsNullOrWhiteSpace(_actionLabel);
     public string ReasonText { get => _reasonText; set => SetField(ref _reasonText, value); }
+
+    public string ReleaseNotes
+    {
+        get => _releaseNotes;
+        set
+        {
+            if (SetField(ref _releaseNotes, value))
+                OnPropertyChanged(nameof(HasReleaseNotes));
+        }
+    }
+
+    public bool HasReleaseNotes => !string.IsNullOrWhiteSpace(_releaseNotes);
+    public string PublisherSignatureSummary { get => _publisherSignatureSummary; set => SetField(ref _publisherSignatureSummary, value); }
+    public string VerificationDetails { get => _verificationDetails; set => SetField(ref _verificationDetails, value); }
     public string ErrorMessage { get => _errorMessage; set => SetField(ref _errorMessage, value); }
     public bool CanApply { get => _canApply; set => SetField(ref _canApply, value); }
     public bool CanRollback { get => _canRollback; set => SetField(ref _canRollback, value); }
@@ -191,5 +234,6 @@ public sealed class AppSelfUpdateStageResult
     public string AppExecutablePath { get; set; } = string.Empty;
     public string UpdaterExecutablePath { get; set; } = string.Empty;
     public string Sha256 { get; set; } = string.Empty;
+    public string PublisherSignatureSummary { get; set; } = string.Empty;
     public string ErrorMessage { get; set; } = string.Empty;
 }

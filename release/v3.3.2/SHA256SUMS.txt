@@ -1,0 +1,4 @@
+1b2cc9603b7b91e43ff3cd7350fb9e1d7b522db0bddd0129fcd9d0f151edccfd  ProjectLuma-Setup-x64.exe
+79385562e2dd654b43487e935a84c106788c9d4511926cc54c384b1dcdac0807  ProjectLuma-v3.3.2-win-x64.zip
+cab09fc9d88b92cdf2612fcc7857876cdd5932e6ce00b8237dea2422fcfce939  README.txt
+eacb42f05448248ce8b1ea2f6bbc0eba84c21fa5b61bdff42f5e63a76d753c00  RELEASE_NOTES.md

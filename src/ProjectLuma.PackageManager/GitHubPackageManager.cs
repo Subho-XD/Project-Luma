@@ -79,7 +79,7 @@ public sealed class GitHubPackageManager : IPackageManager
         };
         // Large archive streams (70+ MB) must never time out at 30 seconds; per-read stall timeout handles unresponsive sockets cleanly.
         var client = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(15) };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ProjectLuma", "3.3.1"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ProjectLuma", "3.3.2"));
         return client;
     }
 

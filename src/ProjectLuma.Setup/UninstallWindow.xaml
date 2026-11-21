@@ -1,7 +1,7 @@
 <Window x:Class="ProjectLuma.Setup.UninstallWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Project Luma Maintenance &amp; Uninstaller — v3.3.1"
+        Title="Project Luma Maintenance &amp; Uninstaller — v3.3.2"
         Width="780" Height="590"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
@@ -26,7 +26,7 @@
 
             <!-- Branded Header -->
             <DockPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock x:Name="VersionBadgeText" DockPanel.Dock="Right" Text="v3.3.1" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{StaticResource SetupAccentBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="VersionBadgeText" DockPanel.Dock="Right" Text="v3.3.2" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{StaticResource SetupAccentBrush}" VerticalAlignment="Center" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource SetupAccentBrush}" ClipToBounds="True" Margin="0,0,12,0">
                         <Image Source="pack://application:,,,/ProjectLuma-Setup-x64;component/Assets/Branding/project-luma-icon.png"

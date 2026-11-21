@@ -42,6 +42,14 @@ public sealed class DiscoveredGame
     public string FriendlyStatusText { get; set; } = "Ready to Enhance";
     public string RecommendationSummary { get; set; } = string.Empty;
     public DateTime? LastEnhancedUtc { get; set; }
+
+    // Manual addition & persistent availability metadata
+    public bool IsManuallyAdded { get; set; }
+    public string CustomInstallLocation { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; } = true;
+    public string AvailabilityReason { get; set; } = string.Empty;
+    public DateTime? AddedAtUtc { get; set; }
+    public bool HasCustomArtwork { get; set; }
 }
 
 /// <summary>Dynamic per-game enhancement profile evaluated against the current GPU and backend versions.</summary>

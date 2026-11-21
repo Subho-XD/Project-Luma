@@ -54,6 +54,9 @@ public sealed class GameCardViewModel : ObservableObject
     public FriendlyGameStatus FriendlyStatus => Game.FriendlyStatus;
     public string FriendlyStatusText => Game.FriendlyStatusText;
     public string RecommendationSummary => Game.RecommendationSummary;
+    public bool IsAvailable => Game.IsAvailable;
+    public bool IsManuallyAdded => Game.IsManuallyAdded;
+    public string AvailabilityReason => Game.AvailabilityReason;
 
     private GameLaunchPhase _launchPhase = GameLaunchPhase.Idle;
 
@@ -326,6 +329,8 @@ public sealed class GameCardViewModel : ObservableObject
             OnPropertyChanged(nameof(FriendlyStatus));
             OnPropertyChanged(nameof(FriendlyStatusText));
             OnPropertyChanged(nameof(RecommendationSummary));
+            OnPropertyChanged(nameof(IsAvailable));
+            OnPropertyChanged(nameof(AvailabilityReason));
             OnPropertyChanged(nameof(IsInstalled));
             OnPropertyChanged(nameof(InstalledStatusText));
             OnPropertyChanged(nameof(NeuralState));

@@ -1206,7 +1206,8 @@ public sealed class RedesignAndEdgeCaseTests
 
             var appItem = coordinator.Status.Items.First(i => i.ComponentId == "project-luma-app");
             Assert.False(appItem.ShowActionButton);
-            Assert.Equal("Installed", appItem.StateBadgeText);
+            Assert.Equal("Already up to date", appItem.StateBadgeText);
+            Assert.Equal(AppUpdateState.AlreadyUpToDate, appItem.UpdateState);
 
             var amdlss5 = coordinator.Status.Items.First(i => i.ComponentId == "amdlss5-reference");
             Assert.False(amdlss5.ShowActionButton);

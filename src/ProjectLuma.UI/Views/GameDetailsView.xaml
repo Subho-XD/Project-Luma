@@ -17,13 +17,18 @@
 
             <!-- Dedicated Game Hub derived directly from Home Design Language -->
             <StackPanel Visibility="{Binding SelectedGame, Converter={StaticResource BoolToVisibilityConverter}}">
-                <!-- Section 1: Cinematic Game Hub Hero -->
-                <Border Height="340" CornerRadius="{StaticResource RadiusHero}" BorderBrush="{StaticResource BorderHairlineBrush}" BorderThickness="1" ClipToBounds="True" Margin="{StaticResource SectionGap}">
-                    <Grid>
-                        <Image Source="{Binding SelectedGame.HeroImagePath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=1600}"
-                               Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <Rectangle Fill="{StaticResource HeroVignetteHorizontalBrush}" />
-                        <Rectangle Fill="{StaticResource HeroVignetteVerticalBrush}" />
+                <!-- Section 1: Cinematic Game Hub Hero (Genuine Rounded Clip + Crisp Overlay Border) -->
+                <Grid Height="340" Margin="{StaticResource SectionGap}">
+                    <Border CornerRadius="{StaticResource RadiusHero}"
+                            Background="{StaticResource SurfaceCardBrush}"
+                            controls:RoundedClip.CornerRadius="{StaticResource RadiusHero}">
+                        <Grid>
+                            <Border Background="{StaticResource SurfaceSecondaryBrush}" />
+                            <Image Source="{Binding SelectedGame.HeroImagePath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=1600}"
+                                   Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Rectangle Fill="{StaticResource HeroVignetteHorizontalBrush}" />
+                            <Rectangle Fill="{StaticResource HeroVignetteVerticalBrush}" />
 
                         <!-- Top Utility Strip Over Hero -->
                         <Grid Margin="{StaticResource HeroInset}" VerticalAlignment="Top">
@@ -176,8 +181,15 @@
                                         Command="{Binding ApplyRecommendedSetupCommand}" />
                             </StackPanel>
                         </Grid>
-                    </Grid>
-                </Border>
+                        </Grid>
+                    </Border>
+                    <Border CornerRadius="{StaticResource RadiusHero}"
+                            BorderBrush="{StaticResource BorderHairlineBrush}"
+                            BorderThickness="1"
+                            Background="Transparent"
+                            IsHitTestVisible="False"
+                            SnapsToDevicePixels="True" />
+                </Grid>
 
                 <!-- Anti-Cheat Protection Notice -->
                 <Border Visibility="{Binding SelectedGame.HasAntiCheatWarning, Converter={StaticResource BoolToVisibilityConverter}}"

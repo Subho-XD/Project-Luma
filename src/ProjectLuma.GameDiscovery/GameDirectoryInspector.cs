@@ -54,6 +54,12 @@ public sealed class GameDirectoryInspector
 
         string exeDir = Path.GetDirectoryName(exePath)!;
         var pe = _peAnalyzer.InspectFile(exePath);
+        if (File.Exists(pathOrExe) && pathOrExe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+            (pe == null || pe.IsDll))
+        {
+            return null;
+        }
+
         bool isX64 = pe?.Is64Bit ?? false;
 
         string resolvedTitle = title;

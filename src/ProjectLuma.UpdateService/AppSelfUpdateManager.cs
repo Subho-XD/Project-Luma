@@ -74,7 +74,8 @@ public sealed class AppSelfUpdateManager
 
         if (!TryValidateAllowlistedUri(_releasesApiUrl, out var apiUri, out string hostReason))
         {
-            item.StateBadgeText = "Check failed";
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
             item.Status = $"Update check blocked: {hostReason}";
             item.ErrorMessage = hostReason;
             item.ActionLabel = "Retry Check";
@@ -87,8 +88,9 @@ public sealed class AppSelfUpdateManager
             using var response = await SendAllowlistedGetAsync(apiUri!, "application/vnd.github+json", HttpCompletionOption.ResponseContentRead, ct);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                item.StateBadgeText = "Installed";
-                item.Status = $"Current release installed (v{installedVersion}; no published GitHub releases yet).";
+                item.UpdateState = AppUpdateState.AlreadyUpToDate;
+                item.StateBadgeText = "Already up to date";
+                item.Status = $"Already up to date (v{installedVersion}; no published GitHub releases yet).";
                 return item;
             }
 
@@ -97,10 +99,11 @@ public sealed class AppSelfUpdateManager
                  response.Headers.TryGetValues("X-RateLimit-Remaining", out var rem) &&
                  rem.FirstOrDefault() == "0"))
             {
-                item.StateBadgeText = "Rate limited";
+                item.UpdateState = AppUpdateState.UpdateFailed;
+                item.StateBadgeText = "Update failed";
                 item.Status = "GitHub API rate limit reached while checking Project Luma releases.";
                 item.ReasonText = "Wait a few minutes before retrying, or open the official Releases page.";
-                item.ErrorMessage = "HTTP 429/403 rate limit";
+                item.ErrorMessage = "HTTP 429/403 rate limit reached while checking for updates.";
                 item.ActionLabel = "Retry Check";
                 item.CanApply = true;
                 return item;
@@ -108,7 +111,8 @@ public sealed class AppSelfUpdateManager
 
             if (!response.IsSuccessStatusCode)
             {
-                item.StateBadgeText = "Check failed";
+                item.UpdateState = AppUpdateState.UpdateFailed;
+                item.StateBadgeText = "Update failed";
                 item.Status = $"GitHub release check returned HTTP {(int)response.StatusCode}.";
                 item.ErrorMessage = item.Status;
                 item.ActionLabel = "Retry Check";
@@ -120,8 +124,9 @@ public sealed class AppSelfUpdateManager
             var candidate = SelectLatestEligibleRelease(json, channel);
             if (candidate == null)
             {
-                item.StateBadgeText = "Installed";
-                item.Status = $"Current release installed (v{installedVersion}; waiting for first release archive).";
+                item.UpdateState = AppUpdateState.AlreadyUpToDate;
+                item.StateBadgeText = "Already up to date";
+                item.Status = $"Already up to date (v{installedVersion}; waiting for first release archive).";
                 return item;
             }
 
@@ -129,13 +134,16 @@ public sealed class AppSelfUpdateManager
             item.ReleasePageUrl = candidate.HtmlUrl;
             item.AssetName = candidate.ZipAssetName;
             item.DownloadUrl = candidate.ZipDownloadUrl;
+            item.ReleaseNotes = candidate.ReleaseNotes;
 
             int cmp = CompareVersions(candidate.VersionText, installedVersion);
             if (cmp <= 0)
             {
-                item.StateBadgeText = "Installed";
+                item.UpdateState = AppUpdateState.AlreadyUpToDate;
+                item.StateBadgeText = "Already up to date";
                 item.AvailableVersion = installedVersion;
-                item.Status = $"Synchronized with latest GitHub release (v{installedVersion}).";
+                item.Status = $"Already up to date (v{installedVersion} matches the latest GitHub release).";
+                item.ReleaseNotes = string.Empty;
                 item.ActionLabel = string.Empty;
                 item.CanApply = false;
                 return item;
@@ -144,7 +152,8 @@ public sealed class AppSelfUpdateManager
             string? expectedHash = await ResolveExpectedSha256Async(candidate, ct);
             if (string.IsNullOrWhiteSpace(expectedHash))
             {
-                item.StateBadgeText = "Verification failed";
+                item.UpdateState = AppUpdateState.UpdateFailed;
+                item.StateBadgeText = "Update failed";
                 item.Status = $"Release v{candidate.VersionText} was found on GitHub, but SHA-256 verification metadata is missing.";
                 item.ErrorMessage = "Missing SHA256SUMS.txt or release asset sha256 digest.";
                 item.ActionLabel = "Retry Check";
@@ -153,10 +162,12 @@ public sealed class AppSelfUpdateManager
             }
 
             item.ExpectedSha256 = expectedHash;
+            item.UpdateState = AppUpdateState.UpdateAvailable;
             item.StateBadgeText = "Update available";
-            item.Status = $"Project Luma v{candidate.VersionText} is available and SHA-256 verified.";
+            item.Status = $"Project Luma v{candidate.VersionText} is available.";
             item.ReasonText = $"Ready to download {candidate.ZipAssetName} and upgrade cleanly from v{installedVersion}.";
-            item.ActionLabel = "Update Project Luma";
+            item.VerificationDetails = $"Expected SHA-256: {expectedHash[..16]}... · HTTPS allowlisted GitHub Releases";
+            item.ActionLabel = "Download & Install Update";
             item.CanApply = true;
             return item;
         }
@@ -171,7 +182,8 @@ public sealed class AppSelfUpdateManager
         catch (Exception ex)
         {
             _logger.Warn("AppSelfUpdate", $"Release check error: {ex.Message}");
-            item.StateBadgeText = "Check failed";
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
             item.Status = $"Could not parse GitHub release metadata: {ex.Message}";
             item.ErrorMessage = ex.Message;
             item.ActionLabel = "Retry Check";
@@ -192,6 +204,9 @@ public sealed class AppSelfUpdateManager
         if (string.IsNullOrWhiteSpace(item.DownloadUrl) || !TryValidateAllowlistedUri(item.DownloadUrl, out var downloadUri, out urlError))
         {
             result.ErrorMessage = string.IsNullOrWhiteSpace(urlError) ? "Missing update download URL." : urlError;
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
+            item.Status = "Update failed.";
             item.ErrorMessage = result.ErrorMessage;
             return result;
         }
@@ -199,6 +214,9 @@ public sealed class AppSelfUpdateManager
         if (string.IsNullOrWhiteSpace(item.ExpectedSha256) || item.ExpectedSha256.Length != 64)
         {
             result.ErrorMessage = "Refused update because the expected SHA-256 checksum is missing or invalid.";
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
+            item.Status = "Update failed.";
             item.ErrorMessage = result.ErrorMessage;
             return result;
         }
@@ -217,6 +235,8 @@ public sealed class AppSelfUpdateManager
         item.DownloadProgress = 0;
         item.DownloadSpeedText = string.Empty;
         item.DownloadedSizeText = string.Empty;
+        item.UpdateState = AppUpdateState.Downloading;
+        item.StateBadgeText = "Downloading";
 
         try
         {
@@ -235,23 +255,26 @@ public sealed class AppSelfUpdateManager
             else
             {
                 item.DownloadProgress = 90;
-                item.Status = $"Verified cached {safeAssetName}.";
+                item.Status = $"Using verified cached {safeAssetName}.";
             }
 
-            item.Status = "Verifying SHA-256 checksum...";
+            item.UpdateState = AppUpdateState.VerifyingPackage;
+            item.StateBadgeText = "Verifying package";
+            item.Status = "Verifying SHA-256 checksum and publisher signature...";
             item.DownloadProgress = 92;
             string actualSha256 = await ComputeFileSha256Async(zipPath, ct);
             if (!string.Equals(actualSha256, item.ExpectedSha256, StringComparison.OrdinalIgnoreCase))
             {
                 try { File.Delete(zipPath); } catch { }
                 result.ErrorMessage = $"SHA-256 mismatch for {safeAssetName}. Expected {item.ExpectedSha256}, got {actualSha256}.";
+                item.UpdateState = AppUpdateState.UpdateFailed;
+                item.StateBadgeText = "Update failed";
                 item.ErrorMessage = result.ErrorMessage;
                 item.Status = "Update checksum verification failed.";
                 return result;
             }
 
-            item.Status = "Extracting verified update archive...";
-            item.DownloadProgress = 96;
+            item.DownloadProgress = 95;
             ExtractZipWithSlipGuard(zipPath, stageRoot);
 
             string stagedAppExe = Path.Combine(stageRoot, "ProjectLuma.exe");
@@ -259,11 +282,26 @@ public sealed class AppSelfUpdateManager
             if (!File.Exists(stagedAppExe) || !File.Exists(stagedUpdaterExe))
             {
                 result.ErrorMessage = "Update archive is missing ProjectLuma.exe or ProjectLuma.Updater.exe.";
+                item.UpdateState = AppUpdateState.UpdateFailed;
+                item.StateBadgeText = "Update failed";
                 item.ErrorMessage = result.ErrorMessage;
                 item.Status = "Update package layout verification failed.";
                 TryDeleteDirectory(stageRoot);
                 return result;
             }
+
+            (bool hasSig, string signer, string sigNote) = ProjectLuma.PackageManager.UserDllVault.InspectAuthenticodeSignerDetailed(stagedAppExe);
+            string sigSummary = hasSig
+                ? $"Signed by {signer} ({sigNote})"
+                : "Publisher signature unavailable (unsigned community build); SHA-256 verified.";
+            result.PublisherSignatureSummary = sigSummary;
+            item.PublisherSignatureSummary = sigSummary;
+            item.VerificationDetails = $"SHA-256 verified ({actualSha256[..16]}...) · {sigSummary}";
+
+            item.UpdateState = AppUpdateState.PreparingInstallation;
+            item.StateBadgeText = "Preparing installation";
+            item.Status = "Preparing installation...";
+            item.DownloadProgress = 98;
 
             string runnerDir = Path.Combine(Path.GetTempPath(), $"ProjectLumaUpdater_{Guid.NewGuid():N}");
             Directory.CreateDirectory(runnerDir);
@@ -277,8 +315,8 @@ public sealed class AppSelfUpdateManager
             result.Sha256 = actualSha256;
 
             item.DownloadProgress = 100;
-            item.Status = $"Staged Project Luma v{item.AvailableVersion}; restarting to apply update...";
-            _logger.Info("AppSelfUpdate", $"Staged v{item.AvailableVersion} (SHA-256: {actualSha256}) at {stageRoot}");
+            item.Status = $"Prepared Project Luma v{item.AvailableVersion}; launching updater...";
+            _logger.Info("AppSelfUpdate", $"Staged v{item.AvailableVersion} (SHA-256: {actualSha256}; {sigSummary}) at {stageRoot}");
             return result;
         }
         catch (OperationCanceledException)
@@ -286,7 +324,12 @@ public sealed class AppSelfUpdateManager
             TryDeleteFile(partialPath);
             TryDeleteDirectory(stageRoot);
             result.ErrorMessage = "Application update canceled.";
-            item.Status = "Update canceled.";
+            item.UpdateState = AppUpdateState.UpdateAvailable;
+            item.StateBadgeText = "Update available";
+            item.DownloadProgress = 0;
+            item.DownloadSpeedText = string.Empty;
+            item.DownloadedSizeText = string.Empty;
+            item.Status = "Update download canceled. Click Download & Install Update to try again.";
             return result;
         }
         catch (InvalidDataException ex)
@@ -295,6 +338,8 @@ public sealed class AppSelfUpdateManager
             TryDeleteFile(zipPath);
             TryDeleteDirectory(stageRoot);
             result.ErrorMessage = $"Update archive is corrupted or unreadable: {ex.Message}";
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
             item.ErrorMessage = result.ErrorMessage;
             item.Status = "Update archive failed integrity check.";
             return result;
@@ -304,6 +349,8 @@ public sealed class AppSelfUpdateManager
             TryDeleteFile(partialPath);
             TryDeleteDirectory(stageRoot);
             result.ErrorMessage = $"Application update failed: {ex.Message}";
+            item.UpdateState = AppUpdateState.UpdateFailed;
+            item.StateBadgeText = "Update failed";
             item.ErrorMessage = result.ErrorMessage;
             item.Status = "Application update failed.";
             _logger.Error("AppSelfUpdate", $"Failed staging v{item.AvailableVersion}: {ex.Message}");
@@ -347,6 +394,8 @@ public sealed class AppSelfUpdateManager
         psi.ArgumentList.Add(stageResult.TargetVersion);
         psi.ArgumentList.Add("--log");
         psi.ArgumentList.Add(logPath);
+        psi.ArgumentList.Add("--completion-marker");
+        psi.ArgumentList.Add(GetCompletionMarkerPath());
         psi.ArgumentList.Add("--relaunch");
 
         try
@@ -401,6 +450,62 @@ public sealed class AppSelfUpdateManager
         return AppContext.BaseDirectory.TrimEnd('\\', '/');
     }
 
+    public static string GetCompletionMarkerPath()
+        => Path.Combine(LumaPaths.GetSubdirectory("self_update"), "last_completed_update.json");
+
+    public static bool TryConsumeCompletedUpdateMarker(string installedVersion)
+    {
+        try
+        {
+            string markerPath = GetCompletionMarkerPath();
+            if (!File.Exists(markerPath)) return false;
+
+            string json = File.ReadAllText(markerPath);
+            using var doc = JsonDocument.Parse(json);
+            string? targetVer = doc.RootElement.TryGetProperty("newVersion", out var v) ? v.GetString() : null;
+            TryDeleteFile(markerPath);
+
+            if (string.IsNullOrWhiteSpace(targetVer)) return false;
+            return CompareVersions(targetVer, installedVersion) == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static UpdateCheckItem CreateCheckingAppItem(string installedVersion) => new()
+    {
+        ComponentId = "project-luma-app",
+        ComponentName = "Project Luma",
+        Kind = "Application",
+        InstalledVersion = installedVersion,
+        AvailableVersion = installedVersion,
+        VerificationLevel = VerificationLevel.VerifiedHashAndHttps,
+        UpdateState = AppUpdateState.CheckingForUpdates,
+        StateBadgeText = "Checking for updates",
+        Status = "Checking GitHub Releases for Project Luma updates...",
+        ActionLabel = string.Empty,
+        CanApply = false,
+        CanRollback = false
+    };
+
+    public static UpdateCheckItem CreateCompletedAppItem(string installedVersion) => new()
+    {
+        ComponentId = "project-luma-app",
+        ComponentName = "Project Luma",
+        Kind = "Application",
+        InstalledVersion = installedVersion,
+        AvailableVersion = installedVersion,
+        VerificationLevel = VerificationLevel.VerifiedHashAndHttps,
+        UpdateState = AppUpdateState.UpdateCompleted,
+        StateBadgeText = "Update completed",
+        Status = $"Updated to Project Luma v{installedVersion} successfully.",
+        ActionLabel = string.Empty,
+        CanApply = false,
+        CanRollback = false
+    };
+
     private static UpdateCheckItem CreateBaseAppItem(string installedVersion) => new()
     {
         ComponentId = "project-luma-app",
@@ -409,7 +514,8 @@ public sealed class AppSelfUpdateManager
         InstalledVersion = installedVersion,
         AvailableVersion = installedVersion,
         VerificationLevel = VerificationLevel.VerifiedHashAndHttps,
-        StateBadgeText = "Installed",
+        UpdateState = AppUpdateState.AlreadyUpToDate,
+        StateBadgeText = "Already up to date",
         Status = $"Current release installed (v{installedVersion})",
         ActionLabel = string.Empty,
         CanApply = false,
@@ -418,7 +524,8 @@ public sealed class AppSelfUpdateManager
 
     private static UpdateCheckItem MarkNetworkFailure(UpdateCheckItem item, string message)
     {
-        item.StateBadgeText = "Offline";
+        item.UpdateState = AppUpdateState.UpdateFailed;
+        item.StateBadgeText = "Update failed";
         item.Status = message;
         item.ErrorMessage = message;
         item.ActionLabel = "Retry Check";
@@ -430,6 +537,7 @@ public sealed class AppSelfUpdateManager
     {
         public string VersionText { get; set; } = string.Empty;
         public string HtmlUrl { get; set; } = DefaultReleasesPageUrl;
+        public string ReleaseNotes { get; set; } = string.Empty;
         public string ZipAssetName { get; set; } = string.Empty;
         public string ZipDownloadUrl { get; set; } = string.Empty;
         public string ZipDigestSha256 { get; set; } = string.Empty;
@@ -484,10 +592,12 @@ public sealed class AppSelfUpdateManager
             if (string.IsNullOrWhiteSpace(zipUrl)) continue;
 
             string htmlUrl = rel.TryGetProperty("html_url", out var htmlProp) ? htmlProp.GetString() ?? DefaultReleasesPageUrl : DefaultReleasesPageUrl;
+            string releaseNotes = rel.TryGetProperty("body", out var bodyProp) ? (bodyProp.GetString() ?? string.Empty).Trim() : string.Empty;
             var candidate = new ReleaseCandidate
             {
                 VersionText = cleanVer,
                 HtmlUrl = htmlUrl,
+                ReleaseNotes = releaseNotes,
                 ZipAssetName = zipName,
                 ZipDownloadUrl = zipUrl,
                 ZipDigestSha256 = zipDigest,

@@ -1,0 +1,10 @@
+﻿# Project Luma v3.3.2 — Release Notes
+
+## Highlights in v3.3.2
+- **Manual Check for Updates & Full 9-State Lifecycle:** Added explicit **Check for Updates** and **Download & Install Update** workflow on Downloads & Updates, cleanly separating Project Luma application updates from enhancement component updates, surfacing GitHub Release notes, SHA-256 + Authenticode signature inspection status, non-blocking progress & cancellation, and explicit nine-state tracking (Checking for updates, Already up to date, Update available, Downloading, Verifying package, Preparing installation, Installing, Update completed, Update failed) backed by out-of-process ProjectLuma.Updater.exe.
+- **Custom Game Persistence & Disconnected Drive Handling:** Unified manual game additions with SqliteCompatibilityRepository (DiscoveredGames) via shared GameLibraryMerger deduplication so individually added .exe titles, custom install paths, and custom artwork persist across restarts without requiring Settings folder registration. Temporarily disconnected drives or missing executables preserve game entries marked **Unavailable** instead of deleting them, and restore automatically on reconnection.
+- **Game Artwork & Border Corner Clipping Fix:** Replaced WPF rectangular ClipToBounds clipping on game cards, thumbnails, hero banners, and sidebar icons with RoundedClip geometry matched to shared RadiusGameCard (12) / RadiusHero (16) tokens plus an inset/overlay selection outline, eliminating rectangular artwork corner bleeding and red selection border artifacts across resolutions and DPI scaling.
+
+## Prior v3.3.1 & v3.3.0 Capabilities Retained
+- **External NeuralHub v0.9.0 Detection & Vault Sync:** Read-only detection of HKCU\Software\Danielblnc\NeuralHub and %LOCALAPPDATA%\Danielblnc\NeuralHub, SHA-256 Vault sync without duplication, and OptiScaler proxy conflict protection.
+- **Core Enhancements:** Persistent per-game FSR presets (OptiScaler.ini), truthful Gameplay Smoothness states, Windows System Tray & HKCU\...\Run startup sync, and non-blocking Downloads UI.

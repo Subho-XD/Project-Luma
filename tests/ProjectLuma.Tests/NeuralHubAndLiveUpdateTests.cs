@@ -19,6 +19,7 @@ using Xunit;
 
 namespace ProjectLuma.Tests;
 
+[Collection("AppDataEnvSerial")]
 public sealed class NeuralHubAndLiveUpdateTests
 {
     private static DetectedGpuInfo CreateRx6600(bool hip72 = false) => new()
@@ -315,12 +316,14 @@ public sealed class NeuralHubAndLiveUpdateTests
             await coordinator.CheckNowAsync();
 
             var appItem = coordinator.Status.Items.First(i => i.ComponentId == "project-luma-app");
+            Assert.Equal(AppUpdateState.UpdateAvailable, appItem.UpdateState);
             Assert.Equal("Update available", appItem.StateBadgeText);
-            Assert.Equal("Update Project Luma", appItem.ActionLabel);
+            Assert.Equal("Download & Install Update", appItem.ActionLabel);
             Assert.True(appItem.CanApply);
 
             var stage = await coordinator.DownloadAndStageAppUpdateAsync(appItem);
             Assert.True(stage.Succeeded, stage.ErrorMessage);
+            Assert.Equal(AppUpdateState.PreparingInstallation, appItem.UpdateState);
             Assert.True(File.Exists(Path.Combine(stage.StageDirectory, "ProjectLuma.exe")));
             Assert.True(File.Exists(Path.Combine(stage.StageDirectory, "ProjectLuma.Updater.exe")));
             Assert.True(File.Exists(stage.UpdaterExecutablePath));
@@ -330,21 +333,25 @@ public sealed class NeuralHubAndLiveUpdateTests
             coordinator.ConfigureAppSelfUpdater(okHttp, AppSelfUpdateManager.DefaultReleasesApiUrl, mockInstallDir, "3.3.1");
             await coordinator.CheckNowAsync();
             var upToDateItem = coordinator.Status.Items.First(i => i.ComponentId == "project-luma-app");
-            Assert.Equal("Installed", upToDateItem.StateBadgeText);
+            Assert.Equal(AppUpdateState.AlreadyUpToDate, upToDateItem.UpdateState);
+            Assert.Equal("Already up to date", upToDateItem.StateBadgeText);
             Assert.False(upToDateItem.ShowActionButton);
 
             // 3. Offline check
             using var offlineHttp = new HttpClient(new StubHandler((_, _) => throw new HttpRequestException("Simulated network down")));
             var mgrOffline = new AppSelfUpdateManager(logger, offlineHttp, currentInstallDirectory: mockInstallDir, appVersionOverride: "3.3.0");
             var offlineItem = await mgrOffline.CheckForAppUpdateAsync("3.3.0", UpdateChannel.Stable, CancellationToken.None);
-            Assert.Equal("Offline", offlineItem.StateBadgeText);
+            Assert.Equal(AppUpdateState.UpdateFailed, offlineItem.UpdateState);
+            Assert.Equal("Update failed", offlineItem.StateBadgeText);
             Assert.Equal("Retry Check", offlineItem.ActionLabel);
 
             // 4. Rate limit HTTP 429
             using var rateHttp = new HttpClient(new StubHandler((_, _) => Task.FromResult(new HttpResponseMessage((HttpStatusCode)429))));
             var mgrRate = new AppSelfUpdateManager(logger, rateHttp, currentInstallDirectory: mockInstallDir, appVersionOverride: "3.3.0");
             var rateItem = await mgrRate.CheckForAppUpdateAsync("3.3.0", UpdateChannel.Stable, CancellationToken.None);
-            Assert.Equal("Rate limited", rateItem.StateBadgeText);
+            Assert.Equal(AppUpdateState.UpdateFailed, rateItem.UpdateState);
+            Assert.Equal("Update failed", rateItem.StateBadgeText);
+            Assert.Contains("rate limit", rateItem.ErrorMessage, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("Retry Check", rateItem.ActionLabel);
 
             // 5. SHA-256 mismatch

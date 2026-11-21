@@ -153,10 +153,14 @@ Open Enhancement Library -> AI Neural Rendering Engine -> View details -> NVIDIA
 $NotesContent = @"
 # Project Luma v$Version — Release Notes
 
-## Highlights in v3.3.1
-- **Full External NeuralHub v0.9.0 Detection & Vault Sync:** Automatically detects upstream NeuralHub installations (`HKCU\Software\Danielblnc\NeuralHub`, `%LOCALAPPDATA%\Danielblnc\NeuralHub`, `runtime\v0.9.0\.nh_payload` + `neuralhub_host.dll` + bundled FFX DLLs), inspects `data\index.ini` (`nvngx_dlssnr.dll`), verifies SHA-256 sync against the Project Luma Vault without duplicating files, checks per-game `games.json` / `neuralhub.ini` / `dlssnr_on_amd.log` vs OptiScaler conflicts safely, and exposes **Open NeuralHub**, **Verify Installation**, **Configure Game**, and **View Diagnostics** controls.
-- **GitHub Releases Live Self-Updater:** `Downloads & Updates` now checks official `Subho-XD/Project-Luma` GitHub Releases, validates `SHA256SUMS.txt` / API `sha256` digests, streams updates with redirect-host allowlisting and Zip-Slip checks, and swaps binaries atomically via out-of-process `ProjectLuma.Updater.exe` (with `--health-check` rollback protection and settings/profile preservation).
-- **Retained v3.3.0 Fixes:** Persistent per-game FSR quality presets (`[FSR]` + `[QualityOverrides]`), truthful Gameplay Smoothness (`Already available in this game` + RX 6000 DLSS-FG blocking), Windows Tray + Startup Run sync, and non-blocking `Download Official` UI.
+## Highlights in v3.3.2
+- **Manual Check for Updates & Full 9-State Lifecycle:** Added explicit **Check for Updates** and **Download & Install Update** workflow on `Downloads & Updates`, cleanly separating Project Luma application updates from enhancement component updates, surfacing GitHub Release notes, SHA-256 + Authenticode signature inspection status, non-blocking progress & cancellation, and explicit nine-state tracking (`Checking for updates`, `Already up to date`, `Update available`, `Downloading`, `Verifying package`, `Preparing installation`, `Installing`, `Update completed`, `Update failed`) backed by out-of-process `ProjectLuma.Updater.exe`.
+- **Custom Game Persistence & Disconnected Drive Handling:** Unified manual game additions with `SqliteCompatibilityRepository` (`DiscoveredGames`) via shared `GameLibraryMerger` deduplication so individually added `.exe` titles, custom install paths, and custom artwork persist across restarts without requiring Settings folder registration. Temporarily disconnected drives or missing executables preserve game entries marked **Unavailable** instead of deleting them, and restore automatically on reconnection.
+- **Game Artwork & Border Corner Clipping Fix:** Replaced WPF rectangular `ClipToBounds` clipping on game cards, thumbnails, hero banners, and sidebar icons with `RoundedClip` geometry matched to shared `RadiusGameCard` (`12`) / `RadiusHero` (`16`) tokens plus an inset/overlay selection outline, eliminating rectangular artwork corner bleeding and red selection border artifacts across resolutions and DPI scaling.
+
+## Prior v3.3.1 & v3.3.0 Capabilities Retained
+- **External NeuralHub v0.9.0 Detection & Vault Sync:** Read-only detection of `HKCU\Software\Danielblnc\NeuralHub` and `%LOCALAPPDATA%\Danielblnc\NeuralHub`, SHA-256 Vault sync without duplication, and OptiScaler proxy conflict protection.
+- **Core Enhancements:** Persistent per-game FSR presets (`OptiScaler.ini`), truthful Gameplay Smoothness states, Windows System Tray & `HKCU\...\Run` startup sync, and non-blocking Downloads UI.
 "@
 [System.IO.File]::WriteAllText((Join-Path $ReleaseDir "RELEASE_NOTES.md"), $NotesContent, [System.Text.Encoding]::UTF8)
 

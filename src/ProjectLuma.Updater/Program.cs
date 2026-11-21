@@ -16,7 +16,7 @@ public static class Program
 
     public static int Main(string[] args)
     {
-        if (args.Contains("--verify-self-test", StringComparer.OrdinalIgnoreCase))
+        if (Array.Exists(args, a => a.Equals("--verify-self-test", StringComparison.OrdinalIgnoreCase)))
             return RunSelfTest();
 
         string? stageDir = GetArg(args, "--stage-dir");
@@ -25,12 +25,13 @@ public static class Program
         string? pidText = GetArg(args, "--pid");
         string? newVersion = GetArg(args, "--new-version");
         string? logPath = GetArg(args, "--log");
+        string? completionMarkerPath = GetArg(args, "--completion-marker");
         string? relaunchArgs = GetArg(args, "--relaunch-args");
-        bool relaunch = args.Contains("--relaunch", StringComparer.OrdinalIgnoreCase);
+        bool relaunch = Array.Exists(args, a => a.Equals("--relaunch", StringComparison.OrdinalIgnoreCase));
 
         if (string.IsNullOrWhiteSpace(stageDir) || string.IsNullOrWhiteSpace(targetDir))
         {
-            Console.Error.WriteLine("Usage: ProjectLuma.Updater.exe --stage-dir <dir> --target-dir <dir> [--pid <id>] [--exe <path>] [--new-version <ver>] [--log <path>] [--relaunch]");
+            Console.Error.WriteLine("Usage: ProjectLuma.Updater.exe --stage-dir <dir> --target-dir <dir> [--pid <id>] [--exe <path>] [--new-version <ver>] [--log <path>] [--completion-marker <path>] [--relaunch]");
             return 2;
         }
 
@@ -40,6 +41,7 @@ public static class Program
         try
         {
             ApplyUpdateTransactional(stageDir, targetDir, exeToHealthCheck, newVersion, logPath);
+            TryWriteCompletionMarker(completionMarkerPath, newVersion, logPath);
             if (relaunch && !string.IsNullOrWhiteSpace(exeToHealthCheck) && File.Exists(exeToHealthCheck))
                 RelaunchUpdatedApp(exeToHealthCheck, targetDir, relaunchArgs, logPath);
             return 0;
@@ -308,6 +310,27 @@ public static class Program
         finally
         {
             try { if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, recursive: true); } catch { }
+        }
+    }
+
+    private static void TryWriteCompletionMarker(string? markerPath, string? newVersion, string? logPath)
+    {
+        if (string.IsNullOrWhiteSpace(markerPath)) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(markerPath))!);
+            string cleanVer = (newVersion ?? string.Empty).Trim().TrimStart('v', 'V');
+            string json = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                newVersion = cleanVer,
+                completedAtUtc = DateTime.UtcNow.ToString("O")
+            });
+            File.WriteAllText(markerPath, json);
+            WriteLog(logPath, $"Wrote update completion marker '{markerPath}' for v{cleanVer}.");
+        }
+        catch (Exception ex)
+        {
+            WriteLog(logPath, $"Non-fatal: could not write completion marker: {ex.Message}");
         }
     }
 

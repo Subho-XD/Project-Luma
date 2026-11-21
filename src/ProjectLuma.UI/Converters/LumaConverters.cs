@@ -52,6 +52,8 @@ public sealed class FriendlyStatusBrushConverter : IValueConverter
             (FriendlyGameStatus.SetupRequired, true) => "#CC292010",
             (FriendlyGameStatus.LimitedSupport, false) => "#B8B8B8",
             (FriendlyGameStatus.LimitedSupport, true) => "#CC202020",
+            (FriendlyGameStatus.Unavailable, false) => "#E7B45B",
+            (FriendlyGameStatus.Unavailable, true) => "#CC292010",
             (_, false) => "#EA6666",
             (_, true) => "#CC2B1414"
         };
@@ -115,7 +117,9 @@ public sealed class FilePathToBitmapConverter : IValueConverter
             return null;
 
         int decodeWidth = int.TryParse(parameter as string, out int w) ? w : 320;
-        string cacheKey = $"{path}|{decodeWidth}";
+        long stamp = 0;
+        try { stamp = File.GetLastWriteTimeUtc(path).Ticks; } catch { }
+        string cacheKey = $"{path}|{decodeWidth}|{stamp}";
 
         if (Cache.TryGetValue(cacheKey, out var cached))
             return cached;

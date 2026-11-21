@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AssemblyName>ProjectLuma</AssemblyName>
-    <Version>3.3.1</Version>
+    <Version>3.3.2</Version>
     <ApplicationTitle>Project Luma</ApplicationTitle>
     <ApplicationIcon>project-luma.ico</ApplicationIcon>
   </PropertyGroup>

@@ -107,6 +107,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _steamGridDbKeyInput = string.Empty;
     private int _gridColumns = 5;
     private volatile bool _disposed;
+    private bool _preserveCompletedUpdateNotice;
+    private UpdateCheckItem _appUpdateItem = new()
+    {
+        ComponentId = "project-luma-app",
+        ComponentName = "Project Luma",
+        Kind = "Application",
+        InstalledVersion = "3.3.2",
+        AvailableVersion = "3.3.2",
+        UpdateState = AppUpdateState.Idle,
+        StateBadgeText = "Already up to date",
+        Status = "Click Check for Updates to check GitHub Releases."
+    };
 
     public ObservableCollection<GameCardViewModel> AllGames { get; } = new();
     public ObservableCollection<GameCardViewModel> HomeStripGames { get; } = new();
@@ -117,6 +129,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<BackendComponentItem> FilteredComponentItems { get; } = new();
     public ObservableCollection<UserImportedDllRecord> UserDlls { get; } = new();
     public ObservableCollection<UpdateCheckItem> UpdateItems { get; } = new();
+    public ObservableCollection<UpdateCheckItem> ComponentUpdateItems { get; } = new();
     public ObservableCollection<InstallSessionManifest> SelectedGameBackups { get; } = new();
     public ObservableCollection<SetupProgressStep> SetupSteps { get; } = new();
     public ObservableCollection<DiscoveredDllCandidate> DiscoveredNeuralCandidates { get; } = new();
@@ -398,7 +411,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         AutoDiscoverNowCommand = ScanGameLibrariesForDllsCommand;
         DeleteUserDllCommand = new AsyncRelayCommand<string?>(p => DeleteUserDllAsync(p));
 
-        CheckUpdatesNowCommand = new AsyncRelayCommand(_ => _updateCoordinator.CheckNowAsync());
+        CheckUpdatesNowCommand = new AsyncRelayCommand(async _ =>
+        {
+            _preserveCompletedUpdateNotice = false;
+            await _updateCoordinator.CheckNowAsync();
+        });
         ApplyUpdateItemCommand = new ConcurrentAsyncRelayCommand<UpdateCheckItem?>(
             item => ApplyUpdateItemAsync(item),
             item => item != null,
@@ -530,7 +547,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    public UpdateCoordinatorStatus UpdateStatus { get => _updateStatus; set => SetProperty(ref _updateStatus, value); }
+    public UpdateCoordinatorStatus UpdateStatus
+    {
+        get => _updateStatus;
+        set
+        {
+            if (SetProperty(ref _updateStatus, value))
+                OnPropertyChanged(nameof(IsCheckingForUpdates));
+        }
+    }
+
+    public UpdateCheckItem AppUpdateItem { get => _appUpdateItem; set => SetProperty(ref _appUpdateItem, value); }
+    public bool IsCheckingForUpdates => UpdateStatus.IsChecking;
 
     public GameCardViewModel? SelectedGame
     {
@@ -671,6 +699,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Settings = await _repo.LoadSettingsAsync();
         Settings.SteamGridDbKeyConfigured = _artworkService.HasSteamGridDbApiKey();
 
+        bool justCompletedUpdate = ProjectLuma.UpdateService.AppSelfUpdateManager.TryConsumeCompletedUpdateMarker(Settings.AppVersion);
+        _preserveCompletedUpdateNotice = justCompletedUpdate;
+        AppUpdateItem = justCompletedUpdate
+            ? ProjectLuma.UpdateService.AppSelfUpdateManager.CreateCompletedAppItem(Settings.AppVersion)
+            : new UpdateCheckItem
+            {
+                ComponentId = "project-luma-app",
+                ComponentName = "Project Luma",
+                Kind = "Application",
+                InstalledVersion = Settings.AppVersion,
+                AvailableVersion = Settings.AppVersion,
+                UpdateState = AppUpdateState.Idle,
+                StateBadgeText = "Already up to date",
+                Status = $"Current release installed (v{Settings.AppVersion})."
+            };
+
         // Sync LaunchOnWindowsStartup directly from real Windows Registry state rather than trusting SQLite alone
         if (_startupService is not InMemoryStartupServiceStub)
         {
@@ -703,7 +747,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         var cachedGames = await _repo.LoadDiscoveredGamesAsync();
         if (cachedGames.Count > 0)
+        {
+            foreach (var cg in cachedGames)
+                ProjectLuma.Core.Services.GameLibraryMerger.EvaluateAvailability(cg);
             await PopulateGamesAsync(cachedGames);
+        }
 
         if (autoScan)
             await ScanLibrariesAsync();
@@ -849,11 +897,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 ScanStatusMessage = p.StatusMessage;
             });
 
-            var found = await _scanner.ScanAllAsync(Settings.CustomLibraryPaths, progress, _scanCts.Token);
-            await PopulateGamesAsync(found);
-            await _repo.SaveDiscoveredGamesAsync(found);
-            ScanStatusMessage = $"Library ready ({found.Count} games)";
-            ShowToast($"Library scan complete — {found.Count} game(s) ready.");
+            var persisted = await _repo.LoadDiscoveredGamesAsync(_scanCts.Token);
+            var scanned = await _scanner.ScanAllAsync(Settings.CustomLibraryPaths, progress, _scanCts.Token);
+            var merged = ProjectLuma.Core.Services.GameLibraryMerger.MergeScannedWithPersisted(scanned, persisted);
+            await PopulateGamesAsync(merged);
+            await _repo.SaveDiscoveredGamesAsync(AllGames.Select(c => c.Game));
+            int availableCount = merged.Count(g => g.IsAvailable);
+            ScanStatusMessage = availableCount == merged.Count
+                ? $"Library ready ({merged.Count} games)"
+                : $"Library ready ({merged.Count} games, {availableCount} available)";
+            ShowToast($"Library scan complete — {merged.Count} game(s) synchronized.");
         }
         catch (OperationCanceledException)
         {
@@ -883,6 +936,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         foreach (var g in games)
         {
+            ProjectLuma.Core.Services.GameLibraryMerger.EvaluateAvailability(g);
+
             var seed = _repo.FindSeedForGame(g);
             if (seed != null && seed.TestedOnRx6600)
                 g.CompatibilityTier = GameCompatibilityTier.Tested;
@@ -932,7 +987,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(g.InstalledBackendId))
+            if (g.IsAvailable && !string.IsNullOrWhiteSpace(g.InstalledBackendId))
                 g.HealthState = await _installer.VerifyInstallationHealthAsync(g);
 
             if (resolveArtwork)
@@ -1305,26 +1360,65 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         string? file = _dialogs.PickFile("Select Game Executable (.exe)", "Game Executables (*.exe)|*.exe");
         if (string.IsNullOrWhiteSpace(file)) return;
+        await AddGameManuallyFromPathAsync(file);
+    }
 
-        var discovered = await _scanner.InspectSingleDirectoryOrExeAsync(file, GameLauncherType.Manual);
+    public async Task<DiscoveredGame?> AddGameManuallyFromPathAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) ||
+            !filePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(filePath))
+        {
+            ActionAlertMessage = "Selected file is not a valid Windows game executable.";
+            return null;
+        }
+
+        var discovered = await _scanner.InspectSingleDirectoryOrExeAsync(filePath, GameLauncherType.Manual);
         if (discovered == null)
         {
             ActionAlertMessage = "Selected file is not a valid Windows game executable.";
-            return;
+            return null;
+        }
+
+        discovered.IsManuallyAdded = true;
+        discovered.CustomInstallLocation = discovered.InstallDirectory;
+        discovered.IsAvailable = true;
+        discovered.AvailabilityReason = string.Empty;
+        discovered.AddedAtUtc = DateTime.UtcNow;
+
+        var existingList = AllGames.Select(c => c.Game).ToList();
+        var persisted = await _repo.LoadDiscoveredGamesAsync();
+        var mergedExisting = ProjectLuma.Core.Services.GameLibraryMerger.MergeScannedWithPersisted(existingList, persisted);
+
+        var duplicate = mergedExisting.FirstOrDefault(g => ProjectLuma.Core.Services.GameLibraryMerger.AreSameGame(g, discovered));
+        if (duplicate != null)
+        {
+            duplicate.IsAvailable = true;
+            duplicate.AvailabilityReason = string.Empty;
+            if (string.IsNullOrWhiteSpace(duplicate.CustomInstallLocation))
+                duplicate.CustomInstallLocation = discovered.InstallDirectory;
+
+            await _repo.UpsertDiscoveredGameAsync(duplicate);
+            await PopulateGamesAsync(mergedExisting, resolveArtwork: false);
+            await _repo.SaveDiscoveredGamesAsync(AllGames.Select(c => c.Game));
+
+            SelectedGame = AllGames.FirstOrDefault(g => g.Id == duplicate.Id || ProjectLuma.Core.Services.GameLibraryMerger.AreSameGame(g.Game, duplicate));
+            ActivePage = LumaPage.GameDetails;
+            ShowToast($"{duplicate.Title} is already in your game library.");
+            return duplicate;
         }
 
         await _artworkService.ResolveArtworkAsync(discovered, Settings.EnableRemoteArtworkLookup);
-        var list = AllGames.Select(c => c.Game).ToList();
-        if (!list.Any(g => g.ExecutablePath.Equals(discovered.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
-        {
-            list.Add(discovered);
-            await _repo.SaveDiscoveredGamesAsync(list);
-            await PopulateGamesAsync(list, resolveArtwork: false);
-        }
+        mergedExisting.Add(discovered);
+        await _repo.UpsertDiscoveredGameAsync(discovered);
+        await PopulateGamesAsync(mergedExisting, resolveArtwork: false);
+        await _repo.SaveDiscoveredGamesAsync(AllGames.Select(c => c.Game));
 
-        SelectedGame = AllGames.FirstOrDefault(g => g.ExecutableName.Equals(Path.GetFileName(discovered.ExecutablePath), StringComparison.OrdinalIgnoreCase));
+        SelectedGame = AllGames.FirstOrDefault(g => g.Id == discovered.Id)
+                       ?? AllGames.FirstOrDefault(g => g.ExecutableName.Equals(Path.GetFileName(discovered.ExecutablePath), StringComparison.OrdinalIgnoreCase));
         ActivePage = LumaPage.GameDetails;
         ShowToast($"Added {discovered.Title} to My Games.");
+        return discovered;
     }
 
     private async Task AddLibraryFolderAsync()
@@ -1355,9 +1449,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             isHero ? "Choose Custom Hero Banner" : "Choose Custom Portrait Cover",
             "Image Files (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp");
         if (string.IsNullOrWhiteSpace(path)) return;
+        await SetCustomArtworkFromPathAsync(isHero, path);
+    }
 
-        await _artworkService.SetCustomArtworkAsync(SelectedGame.Game, isHero ? null : path, isHero ? path : null);
+    public async Task SetCustomArtworkFromPathAsync(bool isHero, string imagePath)
+    {
+        if (SelectedGame == null || string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+            return;
+
+        SelectedGame.Game.HasCustomArtwork = true;
+        await _artworkService.SetCustomArtworkAsync(SelectedGame.Game, isHero ? null : imagePath, isHero ? imagePath : null);
         SelectedGame.NotifyArtworkUpdated();
+        await _repo.UpsertDiscoveredGameAsync(SelectedGame.Game);
         await _repo.SaveDiscoveredGamesAsync(AllGames.Select(c => c.Game));
         ShowToast($"Updated {(isHero ? "hero banner" : "cover artwork")} for {SelectedGame.Title}.");
     }
@@ -1694,6 +1797,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private async Task PlayGameAsync(GameCardViewModel? card)
     {
         if (card == null) return;
+        ProjectLuma.Core.Services.GameLibraryMerger.EvaluateAvailability(card.Game);
+        if (!card.IsAvailable)
+        {
+            ActionAlertMessage = string.IsNullOrWhiteSpace(card.AvailabilityReason)
+                ? $"{card.Title} is currently unavailable because its drive or executable could not be found."
+                : card.AvailabilityReason;
+            return;
+        }
         if (IsSetupRunning)
         {
             ActionAlertMessage = "Please wait for the active enhancement setup to finish before launching a game.";
@@ -1988,6 +2099,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (item.Kind.Equals("Application", StringComparison.OrdinalIgnoreCase) ||
                 item.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase))
             {
+                _preserveCompletedUpdateNotice = false;
                 if (item.ActionLabel.Equals("Retry Check", StringComparison.OrdinalIgnoreCase))
                 {
                     await _updateCoordinator.CheckNowAsync();
@@ -2009,10 +2121,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     return;
                 }
 
+                item.UpdateState = AppUpdateState.Installing;
+                item.StateBadgeText = "Installing";
+                item.Status = $"Installing Project Luma v{stage.TargetVersion} and restarting...";
+
                 bool launched = _updateCoordinator.LaunchSelfUpdater(stage);
                 if (!launched)
                 {
-                    ActionAlertMessage = "Update verified and staged, but ProjectLuma.Updater.exe could not be launched.";
+                    item.UpdateState = AppUpdateState.UpdateFailed;
+                    item.StateBadgeText = "Update failed";
+                    item.ErrorMessage = "Update verified and staged, but ProjectLuma.Updater.exe could not be launched.";
+                    item.Status = "Update failed.";
+                    ActionAlertMessage = item.ErrorMessage;
                     return;
                 }
 
@@ -2231,19 +2351,40 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void ApplyUpdateStatus(UpdateCoordinatorStatus status)
     {
-        UpdateStatus = status;
+        _updateStatus = status;
+        OnPropertyChanged(nameof(UpdateStatus));
+        OnPropertyChanged(nameof(IsCheckingForUpdates));
         var busyById = UpdateItems
             .Where(u => u.IsBusy)
             .ToDictionary(u => u.ComponentId, StringComparer.OrdinalIgnoreCase);
 
+        if (AppUpdateItem.IsBusy)
+            busyById[AppUpdateItem.ComponentId] = AppUpdateItem;
+
         UpdateItems.Clear();
+        ComponentUpdateItems.Clear();
         foreach (var item in status.Items)
         {
-            if (busyById.TryGetValue(item.ComponentId, out var activeBusy))
-                UpdateItems.Add(activeBusy);
+            var effective = busyById.TryGetValue(item.ComponentId, out var activeBusy) ? activeBusy : item;
+            bool isAppItem = effective.Kind.Equals("Application", StringComparison.OrdinalIgnoreCase) ||
+                             effective.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase);
+
+            if (isAppItem)
+            {
+                if (!_preserveCompletedUpdateNotice || effective.IsBusy)
+                    AppUpdateItem = effective;
+                UpdateItems.Add(AppUpdateItem);
+            }
             else
-                UpdateItems.Add(item);
+            {
+                UpdateItems.Add(effective);
+                ComponentUpdateItems.Add(effective);
+            }
         }
+
+        if (status.ApplicationUpdateItem != null && !AppUpdateItem.IsBusy && !_preserveCompletedUpdateNotice)
+            AppUpdateItem = status.ApplicationUpdateItem;
+
         OnPropertyChanged(nameof(PendingUpdatesCount));
     }
 

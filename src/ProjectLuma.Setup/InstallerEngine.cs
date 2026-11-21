@@ -60,7 +60,7 @@ public sealed class UninstallExecutionResult
 
 public static class InstallerEngine
 {
-    public const string ProductVersion = "3.3.1";
+    public const string ProductVersion = "3.3.2";
     public const string UninstallRegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ProjectLuma";
     public const string UninstallerExeName = "ProjectLuma-Uninstall.exe";
 

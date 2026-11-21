@@ -43,6 +43,7 @@ public interface ICompatibilityRepository
     Task<IReadOnlyList<CompatibilitySeedProfile>> GetSeedProfilesAsync(CancellationToken ct = default);
     CompatibilitySeedProfile? FindSeedForGame(DiscoveredGame game);
     Task SaveDiscoveredGamesAsync(IEnumerable<DiscoveredGame> games, CancellationToken ct = default);
+    Task UpsertDiscoveredGameAsync(DiscoveredGame game, CancellationToken ct = default);
     Task<IReadOnlyList<DiscoveredGame>> LoadDiscoveredGamesAsync(CancellationToken ct = default);
     Task SaveGameProfileAsync(GameEnhancementProfile profile, CancellationToken ct = default);
     Task<GameEnhancementProfile?> LoadGameProfileAsync(string gameId, CancellationToken ct = default);

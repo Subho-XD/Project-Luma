@@ -40,6 +40,7 @@
 
     <CornerRadius x:Key="RadiusHero">16</CornerRadius>
     <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+    <CornerRadius x:Key="RadiusGameCard">12</CornerRadius>
     <CornerRadius x:Key="RadiusThumbnail">12</CornerRadius>
     <CornerRadius x:Key="RadiusButton">8</CornerRadius>
     <CornerRadius x:Key="RadiusInput">8</CornerRadius>
@@ -125,6 +126,16 @@
             <Setter.Value>
                 <ControlTemplate>
                     <Rectangle Margin="-2" Stroke="{StaticResource AccentOpticalBrush}" StrokeThickness="1.5" RadiusX="8" RadiusY="8" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="LumaCardFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="-2" Stroke="{StaticResource AccentOpticalBrush}" StrokeThickness="1.5" RadiusX="12" RadiusY="12" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

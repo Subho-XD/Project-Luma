@@ -102,17 +102,30 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
 
         try
         {
+            var settings = await _repo.LoadSettingsAsync(ct);
+
             Status.IsChecking = true;
-            Status.CurrentPhase = "Detecting GPU and loading backend registry";
+            Status.CurrentPhase = "Checking for updates";
             Status.ProgressPercent = 10;
+            Status.ApplicationUpdateItem = AppSelfUpdateManager.CreateCheckingAppItem(settings.AppVersion);
+            var initialItems = Status.Items.Where(i => !i.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase)).ToList();
+            initialItems.Insert(0, Status.ApplicationUpdateItem);
+            Status.Items = initialItems;
             NotifyStatus();
 
-            var settings = await _repo.LoadSettingsAsync(ct);
+            var appItem = await GetSelfUpdateManager().CheckForAppUpdateAsync(settings.AppVersion, settings.UpdateChannel, ct);
+            Status.ApplicationUpdateItem = appItem;
+            var midItems = Status.Items.Where(i => !i.ComponentId.Equals("project-luma-app", StringComparison.OrdinalIgnoreCase)).ToList();
+            midItems.Insert(0, appItem);
+            Status.Items = midItems;
+            Status.CurrentPhase = "Checking enhancement component releases";
+            Status.ProgressPercent = 25;
+            NotifyStatus();
+
             var gpu = await _gpuDetector.DetectPrimaryGpuAsync(ct);
             var manifests = await _packageManager.GetManifestsAsync(ct);
             var userDlls = await _repo.LoadUserDllsAsync(ct);
 
-            var appItem = await GetSelfUpdateManager().CheckForAppUpdateAsync(settings.AppVersion, settings.UpdateChannel, ct);
             var items = new List<UpdateCheckItem> { appItem };
 
             bool anyNetworkFailure = false;
@@ -272,12 +285,15 @@ public sealed class UpdateCoordinatorService : BackgroundService, IUpdateCoordin
                 items.Add(item);
             }
 
-            Status.IsOffline = anyNetworkFailure;
-            if (!anyNetworkFailure)
+            Status.IsOffline = anyNetworkFailure || appItem.Status.Contains("unreachable", StringComparison.OrdinalIgnoreCase);
+            if (!anyNetworkFailure && appItem.UpdateState != AppUpdateState.UpdateFailed)
                 Status.LastSuccessfulCheckUtc = DateTime.UtcNow;
 
+            Status.ApplicationUpdateItem = appItem;
             Status.Items = items;
-            Status.CurrentPhase = anyNetworkFailure ? "Completed (Offline fallback)" : "Synchronized";
+            Status.CurrentPhase = anyNetworkFailure
+                ? "Completed (Offline fallback)"
+                : (appItem.UpdateState == AppUpdateState.UpdateAvailable ? $"Update v{appItem.AvailableVersion} available" : "Synchronized");
             Status.ProgressPercent = 100;
         }
         finally

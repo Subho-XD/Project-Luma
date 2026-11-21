@@ -136,7 +136,23 @@ public enum FriendlyGameStatus
     Enhanced = 1,
     SetupRequired = 2,
     LimitedSupport = 3,
-    NotSupported = 4
+    NotSupported = 4,
+    Unavailable = 5
+}
+
+/// <summary>Explicit nine-state lifecycle for Project Luma self-updates.</summary>
+public enum AppUpdateState
+{
+    Idle = 0,
+    CheckingForUpdates = 1,
+    AlreadyUpToDate = 2,
+    UpdateAvailable = 3,
+    Downloading = 4,
+    VerifyingPackage = 5,
+    PreparingInstallation = 6,
+    Installing = 7,
+    UpdateCompleted = 8,
+    UpdateFailed = 9
 }
 
 /// <summary>One-click gamer enhancement profile presets.</summary>
